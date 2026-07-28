@@ -1,10 +1,10 @@
 # BI Dashboard Agent
 
-Agente de Business Intelligence que transforma planilhas em dashboards profissionais com KPIs, gráficos e insights gerados por Claude Haiku.
+Agente de Business Intelligence que transforma planilhas em dashboards profissionais com KPIs, gráficos e insights gerados por Gemini 2.0 Flash.
 
 ## Stack
 
-- **Backend**: FastAPI + Pandas + Anthropic SDK (Claude Haiku 4.5)
+- **Backend**: FastAPI + Pandas + Google GenAI SDK (Gemini 2.0 Flash)
 - **Frontend**: Next.js 16 (App Router, TS, Tailwind, Recharts)
 
 ## Arquitetura
@@ -15,7 +15,7 @@ bi-agent/
 │   ├── main.py               # FastAPI endpoints
 │   ├── analyzer.py           # Perfil estatístico com Pandas
 │   ├── dashboard_planner.py  # Regras de seleção de KPIs e gráficos
-│   ├── llm.py                # Cliente Claude Haiku
+│   ├── llm.py                # Cliente Gemini 2.0 Flash
 │   └── prompts.py            # System prompt do agente BI
 └── frontend/
     └── src/
@@ -24,7 +24,9 @@ bi-agent/
         └── lib/api.ts        # Cliente REST tipado
 ```
 
-Números vêm de Pandas (determinístico); Claude apenas interpreta o perfil já calculado — sem alucinar dados.
+Números vêm de Pandas (determinístico); Gemini apenas interpreta o perfil já calculado — sem alucinar dados.
+
+Free tier Gemini: 1500 requests/dia sem cartão. Pegue key em https://aistudio.google.com/apikey.
 
 ## Setup
 
@@ -57,7 +59,7 @@ Frontend em `http://localhost:3000`.
 1. Upload `.xlsx` / `.csv` → backend cacheia
 2. `/analyze` → perfil (tipos, nulos, stats, correlação, outliers) + plano de dashboard
 3. UI renderiza KPIs + gráficos (bar/line/pie/scatter/histograma)
-4. Botão "Gerar com Claude" → insights em 5 seções (Resumo, EDA, Dashboard, Insights, Próximas Análises)
+4. Botão "Gerar com Gemini" → insights em 5 seções (Resumo, EDA, Dashboard, Insights, Próximas Análises)
 5. Chat para perguntas ad-hoc sobre a base
 
 ## Endpoints
@@ -66,5 +68,5 @@ Frontend em `http://localhost:3000`.
 |--------|------|-----|
 | POST | `/upload` | Envia planilha, retorna `file_id` |
 | POST | `/analyze/{file_id}` | Perfil + plano de dashboard |
-| POST | `/insights/{file_id}` | Análise em NL via Claude |
+| POST | `/insights/{file_id}` | Análise em NL via Gemini |
 | POST | `/chat/{file_id}` | Chat sobre a base |

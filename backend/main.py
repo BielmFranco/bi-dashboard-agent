@@ -57,7 +57,9 @@ def _load_cached(file_id: str) -> dict:
 def health():
     return {
         "ok": True,
-        "has_api_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
+        "has_api_key": bool(
+            os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+        ),
         "cached_files": len(_cache),
     }
 
@@ -134,5 +136,8 @@ if __name__ == "__main__":
     import uvicorn
 
     log.info("Backend subindo em http://127.0.0.1:8000")
-    log.info("API key configurada: %s", bool(os.environ.get("ANTHROPIC_API_KEY")))
+    log.info(
+        "API key configurada: %s",
+        bool(os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")),
+    )
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")

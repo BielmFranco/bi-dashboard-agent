@@ -1,4 +1,4 @@
-"""Claude Haiku client."""
+"""Google Gemini 2.0 Flash client."""
 from __future__ import annotations
 
 import json
@@ -6,14 +6,10 @@ import logging
 import os
 from typing import Iterable
 
-from anthropic import (
-    Anthropic,
-    APIConnectionError,
-    APIStatusError,
-    AuthenticationError,
-    RateLimitError,
-)
 from dotenv import load_dotenv
+from google import genai
+from google.genai import errors as genai_errors
+from google.genai import types
 
 from prompts import CHAT_SYSTEM, INSIGHTS_USER_TEMPLATE, SYSTEM_PROMPT
 
@@ -21,59 +17,74 @@ load_dotenv()
 
 log = logging.getLogger("bi.llm")
 
-_client: Anthropic | None = None
+_client: genai.Client | None = None
 
 
-def client() -> Anthropic:
+def client() -> genai.Client:
     global _client
     if _client is None:
-        key = os.environ.get("ANTHROPIC_API_KEY")
+        key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
         if not key:
             raise RuntimeError(
-                "ANTHROPIC_API_KEY não definida. Crie backend/.env com a key.",
+                "GOOGLE_API_KEY não definida. Crie backend/.env com sua key do Google AI Studio.",
             )
-        _client = Anthropic(api_key=key, timeout=120.0, max_retries=1)
+        _client = genai.Client(api_key=key)
     return _client
 
 
 def model_id() -> str:
-    return os.environ.get("MODEL_ID", "claude-haiku-4-5-20251001")
+    return os.environ.get("MODEL_ID", "gemini-2.0-flash")
 
 
-def _call(system: str, messages: list[dict], max_tokens: int) -> str:
+def _call(system: str, contents: list[types.Content], max_tokens: int) -> str:
     try:
-        resp = client().messages.create(
+        resp = client().models.generate_content(
             model=model_id(),
-            max_tokens=max_tokens,
-            system=system,
-            messages=messages,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=system,
+                max_output_tokens=max_tokens,
+                temperature=0.4,
+            ),
         )
-        return "".join(b.text for b in resp.content if b.type == "text")
-    except AuthenticationError as e:
-        log.error("Anthropic auth error: %s", e)
-        raise RuntimeError("Key inválida ou sem créditos. Verifique ANTHROPIC_API_KEY.")
-    except RateLimitError as e:
-        log.error("Anthropic rate limit: %s", e)
-        raise RuntimeError("Rate limit da Anthropic atingido. Aguarde e tente novamente.")
-    except APIConnectionError as e:
-        log.error("Anthropic connection error: %s", e)
-        raise RuntimeError("Falha de conexão com Anthropic. Verifique internet/proxy.")
-    except APIStatusError as e:
-        log.error("Anthropic API error %s: %s", e.status_code, e.message)
-        msg = str(e.message or "")
-        if "credit balance" in msg.lower() or "insufficient" in msg.lower():
+        text = resp.text or ""
+        if not text:
+            log.warning("Gemini retornou resposta vazia. Candidates: %s", resp.candidates)
+        return text
+    except genai_errors.ClientError as e:
+        status = getattr(e, "code", None)
+        msg = str(e)
+        log.error("Gemini client error %s: %s", status, msg)
+        low = msg.lower()
+        if status == 401 or "api key" in low or "unauthenticated" in low:
             raise RuntimeError(
-                "Sem créditos na conta Anthropic. Adicione em "
-                "https://console.anthropic.com/settings/billing"
+                "Key inválida. Verifique GOOGLE_API_KEY em backend/.env. "
+                "Pegue uma em https://aistudio.google.com/apikey",
             )
-        if e.status_code == 400:
-            raise RuntimeError(f"Requisição inválida à Anthropic: {msg}")
-        if e.status_code == 403:
+        if status == 429 or "quota" in low or "rate" in low:
+            raise RuntimeError(
+                "Quota Gemini atingida (1500 req/dia no free tier). Aguarde ou faça upgrade.",
+            )
+        if status == 400:
+            raise RuntimeError(f"Requisição inválida ao Gemini: {msg}")
+        if status == 403:
             raise RuntimeError("Acesso negado. Key sem permissão para este modelo.")
-        raise RuntimeError(f"Erro Anthropic {e.status_code}: {msg}")
+        raise RuntimeError(f"Erro Gemini {status}: {msg}")
+    except genai_errors.ServerError as e:
+        log.error("Gemini server error: %s", e)
+        raise RuntimeError(f"Erro no servidor Gemini: {e}")
+    except genai_errors.APIError as e:
+        log.error("Gemini API error: %s", e)
+        raise RuntimeError(f"Erro Gemini: {e}")
     except Exception as e:
         log.exception("Unexpected LLM error")
-        raise RuntimeError(f"Erro inesperado no Claude: {e}")
+        raise RuntimeError(f"Erro inesperado no Gemini: {e}")
+
+
+def _text_content(role: str, text: str) -> types.Content:
+    # Gemini uses "user" and "model" roles.
+    gem_role = "model" if role == "assistant" else "user"
+    return types.Content(role=gem_role, parts=[types.Part.from_text(text=text)])
 
 
 def generate_insights(profile: dict, plan: dict, sample_n: int = 20) -> str:
@@ -96,20 +107,21 @@ def generate_insights(profile: dict, plan: dict, sample_n: int = 20) -> str:
         sample_n=sample_n,
     )
     log.info("Insights request: model=%s user_chars=%d", model_id(), len(user))
-    return _call(SYSTEM_PROMPT, [{"role": "user", "content": user}], max_tokens=3000)
+    return _call(SYSTEM_PROMPT, [_text_content("user", user)], max_tokens=3000)
 
 
 def chat(profile: dict, history: Iterable[dict], user_msg: str) -> str:
+    hist = list(history)
     slim = {k: v for k, v in profile.items() if k != "sample"}
     ctx = "Contexto da base carregada (perfil resumido):\n" + json.dumps(
         slim, ensure_ascii=False, default=str
     )[:20000]
-    messages: list[dict] = [
-        {"role": "user", "content": ctx},
-        {"role": "assistant", "content": "Base carregada. Pode perguntar."},
+    contents: list[types.Content] = [
+        _text_content("user", ctx),
+        _text_content("assistant", "Base carregada. Pode perguntar."),
     ]
-    for h in history:
-        messages.append({"role": h["role"], "content": h["content"]})
-    messages.append({"role": "user", "content": user_msg})
-    log.info("Chat request: history=%d msg_chars=%d", len(list(history)), len(user_msg))
-    return _call(CHAT_SYSTEM, messages, max_tokens=1500)
+    for h in hist:
+        contents.append(_text_content(h["role"], h["content"]))
+    contents.append(_text_content("user", user_msg))
+    log.info("Chat request: history=%d msg_chars=%d", len(hist), len(user_msg))
+    return _call(CHAT_SYSTEM, contents, max_tokens=1500)

@@ -68,7 +68,7 @@ export default function Home() {
           <div>
             <h1 className="text-2xl font-bold">BI Dashboard Agent</h1>
             <p className="text-sm text-slate-400">
-              Análise, KPIs, dashboards e insights com Claude Haiku
+              Análise, KPIs, dashboards e insights com Gemini 2.0 Flash
             </p>
           </div>
         </div>

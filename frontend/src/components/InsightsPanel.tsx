@@ -22,7 +22,7 @@ export default function InsightsPanel({ insights, loading, onRun }: Props) {
           disabled={loading}
           className="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 text-xs font-medium disabled:opacity-50"
         >
-          {loading ? "Gerando..." : insights ? "Regenerar" : "Gerar com Claude"}
+          {loading ? "Gerando..." : insights ? "Regenerar" : "Gerar com Gemini"}
         </button>
       </div>
       {insights ? (
@@ -31,7 +31,7 @@ export default function InsightsPanel({ insights, loading, onRun }: Props) {
         </div>
       ) : (
         <p className="text-sm text-slate-400">
-          Clique em <em>Gerar com Claude</em> para receber análise em linguagem natural com base no perfil e no plano de dashboard.
+          Clique em <em>Gerar com Gemini</em> para receber análise em linguagem natural com base no perfil e no plano de dashboard.
         </p>
       )}
     </div>

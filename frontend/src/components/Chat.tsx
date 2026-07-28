@@ -48,7 +48,7 @@ export default function Chat({ fileId }: { fileId: string }) {
                 : "bg-slate-800/60 border border-slate-700 mr-8"
             }`}
           >
-            <p className="text-xs text-slate-400 mb-1">{m.role === "user" ? "Você" : "Claude"}</p>
+            <p className="text-xs text-slate-400 mb-1">{m.role === "user" ? "Você" : "Gemini"}</p>
             <div className="whitespace-pre-wrap">{m.content}</div>
           </div>
         ))}
