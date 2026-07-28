@@ -60,7 +60,17 @@ def _call(system: str, messages: list[dict], max_tokens: int) -> str:
         raise RuntimeError("Falha de conexão com Anthropic. Verifique internet/proxy.")
     except APIStatusError as e:
         log.error("Anthropic API error %s: %s", e.status_code, e.message)
-        raise RuntimeError(f"Erro Anthropic {e.status_code}: {e.message}")
+        msg = str(e.message or "")
+        if "credit balance" in msg.lower() or "insufficient" in msg.lower():
+            raise RuntimeError(
+                "Sem créditos na conta Anthropic. Adicione em "
+                "https://console.anthropic.com/settings/billing"
+            )
+        if e.status_code == 400:
+            raise RuntimeError(f"Requisição inválida à Anthropic: {msg}")
+        if e.status_code == 403:
+            raise RuntimeError("Acesso negado. Key sem permissão para este modelo.")
+        raise RuntimeError(f"Erro Anthropic {e.status_code}: {msg}")
     except Exception as e:
         log.exception("Unexpected LLM error")
         raise RuntimeError(f"Erro inesperado no Claude: {e}")
