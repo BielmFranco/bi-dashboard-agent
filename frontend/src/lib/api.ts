@@ -1,33 +1,79 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
+async function parseError(r: Response): Promise<string> {
+  const ct = r.headers.get("content-type") || "";
+  try {
+    if (ct.includes("application/json")) {
+      const j = await r.json();
+      return j.detail || j.message || JSON.stringify(j);
+    }
+    const t = await r.text();
+    return t.slice(0, 400) || `HTTP ${r.status}`;
+  } catch {
+    return `HTTP ${r.status} ${r.statusText}`;
+  }
+}
+
+async function request<T>(
+  path: string,
+  init: RequestInit & { timeoutMs?: number } = {},
+): Promise<T> {
+  const { timeoutMs = 120000, ...rest } = init;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(`${BASE}${path}`, { ...rest, signal: ctrl.signal });
+    if (!r.ok) {
+      const msg = await parseError(r);
+      throw new Error(`[${r.status}] ${msg}`);
+    }
+    return (await r.json()) as T;
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw new Error(`Timeout após ${timeoutMs / 1000}s`);
+    }
+    if (e instanceof TypeError) {
+      throw new Error(
+        `Falha de rede — backend em ${BASE} não respondeu. Confira se o servidor está rodando.`,
+      );
+    }
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 export async function uploadFile(file: File) {
   const fd = new FormData();
   fd.append("file", file);
-  const r = await fetch(`${BASE}/upload`, { method: "POST", body: fd });
-  if (!r.ok) throw new Error((await r.json()).detail || "Erro no upload");
-  return r.json() as Promise<{ file_id: string; filename: string; size: number }>;
+  return request<{ file_id: string; filename: string; size: number }>("/upload", {
+    method: "POST",
+    body: fd,
+    timeoutMs: 60000,
+  });
 }
 
 export async function analyze(fileId: string) {
-  const r = await fetch(`${BASE}/analyze/${fileId}`, { method: "POST" });
-  if (!r.ok) throw new Error((await r.json()).detail || "Erro na análise");
-  return r.json() as Promise<{ profile: Profile; plan: Plan }>;
+  return request<{ profile: Profile; plan: Plan }>(`/analyze/${fileId}`, {
+    method: "POST",
+    timeoutMs: 60000,
+  });
 }
 
 export async function insights(fileId: string) {
-  const r = await fetch(`${BASE}/insights/${fileId}`, { method: "POST" });
-  if (!r.ok) throw new Error((await r.json()).detail || "Erro nos insights");
-  return r.json() as Promise<{ insights: string }>;
+  return request<{ insights: string }>(`/insights/${fileId}`, {
+    method: "POST",
+    timeoutMs: 180000,
+  });
 }
 
 export async function chat(fileId: string, history: ChatMsg[], message: string) {
-  const r = await fetch(`${BASE}/chat/${fileId}`, {
+  return request<{ reply: string }>(`/chat/${fileId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ history, message }),
+    timeoutMs: 120000,
   });
-  if (!r.ok) throw new Error((await r.json()).detail || "Erro no chat");
-  return r.json() as Promise<{ reply: string }>;
 }
 
 export type ChatMsg = { role: "user" | "assistant"; content: string };
