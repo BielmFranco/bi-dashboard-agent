@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BarChart3, Loader2 } from "lucide-react";
 import Upload from "@/components/Upload";
 import KPICard from "@/components/KPICard";
@@ -8,7 +8,16 @@ import ChartBlock from "@/components/ChartBlock";
 import ProfileSummary from "@/components/ProfileSummary";
 import InsightsPanel from "@/components/InsightsPanel";
 import Chat from "@/components/Chat";
-import { analyze, insightsStream, type Plan, type Profile } from "@/lib/api";
+import {
+  analyze,
+  deleteFile,
+  getAnalysis,
+  insightsStream,
+  type Plan,
+  type Profile,
+} from "@/lib/api";
+
+const LS_KEY = "bi-agent:last-file-id";
 
 export default function Home() {
   const [fileId, setFileId] = useState<string | null>(null);
@@ -19,6 +28,29 @@ export default function Home() {
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [insightsText, setInsightsText] = useState<string | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
+  const [restoring, setRestoring] = useState(true);
+
+  // Restore last session from localStorage on mount.
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem(LS_KEY) : null;
+    if (!saved) {
+      setRestoring(false);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await getAnalysis(saved);
+        setFileId(saved);
+        setFilename(res.filename ?? null);
+        setProfile(res.profile);
+        setPlan(res.plan);
+      } catch {
+        localStorage.removeItem(LS_KEY);
+      } finally {
+        setRestoring(false);
+      }
+    })();
+  }, []);
 
   async function handleUploaded(id: string, name: string) {
     setFileId(id);
@@ -32,6 +64,7 @@ export default function Home() {
       const res = await analyze(id);
       setProfile(res.profile);
       setPlan(res.plan);
+      localStorage.setItem(LS_KEY, id);
     } catch (e) {
       setAnalyzeError(e instanceof Error ? e.message : "Erro");
     } finally {
@@ -58,12 +91,21 @@ export default function Home() {
     }
   }
 
-  function reset() {
+  async function reset() {
+    const oldId = fileId;
     setFileId(null);
     setFilename(null);
     setProfile(null);
     setPlan(null);
     setInsightsText(null);
+    localStorage.removeItem(LS_KEY);
+    if (oldId) {
+      try {
+        await deleteFile(oldId);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   return (
@@ -88,7 +130,13 @@ export default function Home() {
         )}
       </header>
 
-      {!fileId && <Upload onUploaded={handleUploaded} />}
+      {restoring && (
+        <div className="flex items-center gap-2 text-sm text-slate-400 mb-4">
+          <Loader2 className="h-4 w-4 animate-spin" /> Restaurando sessão anterior...
+        </div>
+      )}
+
+      {!restoring && !fileId && <Upload onUploaded={handleUploaded} />}
 
       {fileId && (
         <section className="space-y-6">

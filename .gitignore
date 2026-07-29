@@ -5,6 +5,8 @@ backend/**/__pycache__/
 backend/*.pyc
 backend/uploads/*
 !backend/uploads/.gitkeep
+backend/cache/*
+!backend/cache/.gitkeep
 backend/.env
 
 # Node

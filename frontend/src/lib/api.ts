@@ -60,6 +60,20 @@ export async function analyze(fileId: string) {
   });
 }
 
+export async function getAnalysis(fileId: string) {
+  return request<{ profile: Profile; plan: Plan; filename?: string }>(
+    `/analyze/${fileId}`,
+    { method: "GET", timeoutMs: 15000 },
+  );
+}
+
+export async function deleteFile(fileId: string) {
+  return request<{ ok: boolean }>(`/files/${fileId}`, {
+    method: "DELETE",
+    timeoutMs: 10000,
+  });
+}
+
 export async function insights(fileId: string) {
   return request<{ insights: string }>(`/insights/${fileId}`, {
     method: "POST",

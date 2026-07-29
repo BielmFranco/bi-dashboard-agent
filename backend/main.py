@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+import cache as disk_cache
 from analyzer import load_dataframe, profile_dataframe
 from dashboard_planner import build_plan
 from llm import chat as llm_chat
@@ -43,8 +44,9 @@ app.add_middleware(
 )
 
 
-# In-memory cache: file_id -> {path, filename, profile, plan}
-_cache: dict[str, dict] = {}
+# In-memory cache: file_id -> {path, filename, profile, plan, uploaded_at}
+# Restored from disk on startup, synced back on every mutation.
+_cache: dict[str, dict] = disk_cache.load_all()
 
 
 def _load_cached(file_id: str) -> dict:
@@ -52,6 +54,12 @@ def _load_cached(file_id: str) -> dict:
     if not entry:
         raise HTTPException(404, "file_id não encontrado. Faça upload novamente.")
     return entry
+
+
+def _persist(file_id: str) -> None:
+    entry = _cache.get(file_id)
+    if entry:
+        disk_cache.save(file_id, entry)
 
 
 @app.get("/health")
@@ -63,6 +71,23 @@ def health():
         ),
         "cached_files": len(_cache),
     }
+
+
+@app.get("/files")
+def list_files():
+    items = [disk_cache.summary(fid, e) for fid, e in _cache.items()]
+    items.sort(key=lambda x: x.get("uploaded_at") or 0, reverse=True)
+    return {"files": items}
+
+
+@app.delete("/files/{file_id}")
+def delete_file(file_id: str):
+    entry = _cache.pop(file_id, None)
+    if not entry:
+        raise HTTPException(404, "file_id não encontrado.")
+    disk_cache.delete(file_id, entry)
+    log.info("File removido: %s (%s)", file_id, entry.get("filename"))
+    return {"ok": True}
 
 
 @app.post("/upload")
@@ -77,6 +102,7 @@ async def upload(file: UploadFile = File(...)):
     path = UPLOAD_DIR / f"{file_id}{ext}"
     path.write_bytes(data)
     _cache[file_id] = {"path": str(path), "filename": file.filename}
+    _persist(file_id)
     log.info("Upload ok: %s (%d bytes) -> %s", file.filename, len(data), file_id)
     return {"file_id": file_id, "filename": file.filename, "size": len(data)}
 
@@ -93,9 +119,19 @@ def analyze(file_id: str):
     plan = build_plan(df, profile)
     entry["profile"] = profile
     entry["plan"] = plan
+    _persist(file_id)
     log.info("Analyze ok: %s rows=%d cols=%d charts=%d",
              file_id, profile["rows"], profile["cols"], len(plan["charts"]))
     return {"profile": profile, "plan": plan}
+
+
+@app.get("/analyze/{file_id}")
+def get_analysis(file_id: str):
+    """Retrieve cached analysis without recomputing — used to restore session."""
+    entry = _load_cached(file_id)
+    if "profile" not in entry or "plan" not in entry:
+        raise HTTPException(404, "Análise não encontrada. Rode POST /analyze.")
+    return {"profile": entry["profile"], "plan": entry["plan"], "filename": entry.get("filename")}
 
 
 @app.post("/insights/{file_id}")
@@ -175,4 +211,5 @@ if __name__ == "__main__":
         "API key configurada: %s",
         bool(os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")),
     )
+    log.info("Cache disco: %d arquivos restaurados", len(_cache))
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
