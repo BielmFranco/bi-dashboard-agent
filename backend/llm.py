@@ -18,17 +18,20 @@ load_dotenv()
 log = logging.getLogger("bi.llm")
 
 _client: genai.Client | None = None
+_client_key: str | None = None
 
 
 def client() -> genai.Client:
-    global _client
-    if _client is None:
-        key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-        if not key:
-            raise RuntimeError(
-                "GOOGLE_API_KEY não definida. Crie backend/.env com sua key do Google AI Studio.",
-            )
+    global _client, _client_key
+    load_dotenv(override=True)
+    key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+    if not key:
+        raise RuntimeError(
+            "GOOGLE_API_KEY não definida. Crie backend/.env com sua key do Google AI Studio.",
+        )
+    if _client is None or _client_key != key:
         _client = genai.Client(api_key=key)
+        _client_key = key
     return _client
 
 
