@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Iterable
+from typing import Iterable, Iterator
 
 from dotenv import load_dotenv
 from google import genai
@@ -90,9 +90,9 @@ def _text_content(role: str, text: str) -> types.Content:
     return types.Content(role=gem_role, parts=[types.Part.from_text(text=text)])
 
 
-def generate_insights(profile: dict, plan: dict, sample_n: int = 20) -> str:
+def _build_insights_prompt(profile: dict, plan: dict, sample_n: int = 20) -> str:
     profile_slim = {k: v for k, v in profile.items() if k != "sample"}
-    user = INSIGHTS_USER_TEMPLATE.format(
+    return INSIGHTS_USER_TEMPLATE.format(
         profile_json=json.dumps(profile_slim, ensure_ascii=False, default=str)[:40000],
         plan_json=json.dumps(
             {
@@ -109,8 +109,61 @@ def generate_insights(profile: dict, plan: dict, sample_n: int = 20) -> str:
         sample_json=json.dumps(profile.get("sample", []), ensure_ascii=False, default=str)[:15000],
         sample_n=sample_n,
     )
+
+
+def generate_insights(profile: dict, plan: dict, sample_n: int = 20) -> str:
+    user = _build_insights_prompt(profile, plan, sample_n)
     log.info("Insights request: model=%s user_chars=%d", model_id(), len(user))
     return _call(SYSTEM_PROMPT, [_text_content("user", user)], max_tokens=3000)
+
+
+def _translate_error(e: Exception) -> RuntimeError:
+    if isinstance(e, genai_errors.ClientError):
+        status = getattr(e, "code", None)
+        msg = str(e)
+        low = msg.lower()
+        if status == 401 or "api key" in low or "unauthenticated" in low:
+            return RuntimeError(
+                "Key inválida. Verifique GOOGLE_API_KEY em backend/.env. "
+                "Pegue uma em https://aistudio.google.com/apikey",
+            )
+        if status == 429 or "quota" in low or "rate" in low:
+            return RuntimeError(
+                "Quota Gemini atingida (1500 req/dia no free tier). Aguarde ou faça upgrade.",
+            )
+        if status == 400:
+            return RuntimeError(f"Requisição inválida ao Gemini: {msg}")
+        if status == 403:
+            return RuntimeError("Acesso negado. Key sem permissão para este modelo.")
+        return RuntimeError(f"Erro Gemini {status}: {msg}")
+    if isinstance(e, genai_errors.ServerError):
+        return RuntimeError(f"Erro no servidor Gemini: {e}")
+    if isinstance(e, genai_errors.APIError):
+        return RuntimeError(f"Erro Gemini: {e}")
+    return RuntimeError(f"Erro inesperado no Gemini: {e}")
+
+
+def generate_insights_stream(profile: dict, plan: dict, sample_n: int = 20) -> Iterator[str]:
+    """Yields text chunks as Gemini generates them."""
+    user = _build_insights_prompt(profile, plan, sample_n)
+    log.info("Insights stream request: model=%s user_chars=%d", model_id(), len(user))
+    try:
+        stream = client().models.generate_content_stream(
+            model=model_id(),
+            contents=[_text_content("user", user)],
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                max_output_tokens=3000,
+                temperature=0.4,
+            ),
+        )
+        for chunk in stream:
+            text = getattr(chunk, "text", None)
+            if text:
+                yield text
+    except Exception as e:
+        log.exception("Stream error")
+        raise _translate_error(e)
 
 
 def chat(profile: dict, history: Iterable[dict], user_msg: str) -> str:

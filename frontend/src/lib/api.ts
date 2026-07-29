@@ -67,6 +67,57 @@ export async function insights(fileId: string) {
   });
 }
 
+export async function insightsStream(
+  fileId: string,
+  onChunk: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const r = await fetch(`${BASE}/insights_stream/${fileId}`, {
+    method: "POST",
+    signal,
+  });
+  if (!r.ok || !r.body) {
+    const ct = r.headers.get("content-type") || "";
+    let msg = `HTTP ${r.status}`;
+    try {
+      if (ct.includes("application/json")) {
+        const j = await r.json();
+        msg = j.detail || msg;
+      } else {
+        msg = (await r.text()).slice(0, 400) || msg;
+      }
+    } catch {
+      /* keep */
+    }
+    throw new Error(`[${r.status}] ${msg}`);
+  }
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let errored: string | null = null;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx: number;
+    while ((idx = buf.indexOf("\n\n")) !== -1) {
+      const raw = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      let ev = "chunk";
+      const dataLines: string[] = [];
+      for (const line of raw.split("\n")) {
+        if (line.startsWith("event: ")) ev = line.slice(7).trim();
+        else if (line.startsWith("data: ")) dataLines.push(line.slice(6));
+      }
+      const data = dataLines.join("\n");
+      if (ev === "chunk") onChunk(data);
+      else if (ev === "error") errored = data;
+      else if (ev === "done") return;
+    }
+  }
+  if (errored) throw new Error(errored);
+}
+
 export async function chat(fileId: string, history: ChatMsg[], message: string) {
   return request<{ reply: string }>(`/chat/${fileId}`, {
     method: "POST",

@@ -8,12 +8,13 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from analyzer import load_dataframe, profile_dataframe
 from dashboard_planner import build_plan
 from llm import chat as llm_chat
-from llm import generate_insights
+from llm import generate_insights, generate_insights_stream
 
 logging.basicConfig(
     level=logging.INFO,
@@ -110,6 +111,40 @@ def insights(file_id: str):
         log.exception("Erro inesperado em /insights")
         raise HTTPException(500, f"Erro inesperado: {e}")
     return {"insights": text}
+
+
+def _sse(event: str, data: str) -> str:
+    payload = data.replace("\r\n", "\n").replace("\r", "\n")
+    lines = "\n".join(f"data: {ln}" for ln in payload.split("\n"))
+    return f"event: {event}\n{lines}\n\n"
+
+
+@app.post("/insights_stream/{file_id}")
+def insights_stream(file_id: str):
+    entry = _load_cached(file_id)
+    if "profile" not in entry or "plan" not in entry:
+        raise HTTPException(400, "Rode /analyze antes.")
+
+    def gen():
+        try:
+            for chunk in generate_insights_stream(entry["profile"], entry["plan"]):
+                yield _sse("chunk", chunk)
+            yield _sse("done", "")
+        except RuntimeError as e:
+            yield _sse("error", str(e))
+        except Exception as e:
+            log.exception("Erro inesperado em /insights_stream")
+            yield _sse("error", f"Erro inesperado: {e}")
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 class ChatBody(BaseModel):

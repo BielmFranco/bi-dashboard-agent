@@ -8,7 +8,7 @@ import ChartBlock from "@/components/ChartBlock";
 import ProfileSummary from "@/components/ProfileSummary";
 import InsightsPanel from "@/components/InsightsPanel";
 import Chat from "@/components/Chat";
-import { analyze, insights, type Plan, type Profile } from "@/lib/api";
+import { analyze, insightsStream, type Plan, type Profile } from "@/lib/api";
 
 export default function Home() {
   const [fileId, setFileId] = useState<string | null>(null);
@@ -42,11 +42,17 @@ export default function Home() {
   async function runInsights() {
     if (!fileId) return;
     setInsightsLoading(true);
+    setInsightsText("");
     try {
-      const res = await insights(fileId);
-      setInsightsText(res.insights);
+      await insightsStream(fileId, (delta) => {
+        setInsightsText((prev) => (prev ?? "") + delta);
+      });
     } catch (e) {
-      setInsightsText(`Erro: ${e instanceof Error ? e.message : e}`);
+      setInsightsText(
+        (prev) =>
+          (prev ? prev + "\n\n" : "") +
+          `> **Erro:** ${e instanceof Error ? e.message : String(e)}`,
+      );
     } finally {
       setInsightsLoading(false);
     }

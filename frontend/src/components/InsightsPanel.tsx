@@ -57,7 +57,15 @@ export default function InsightsPanel({ insights, loading, onRun }: Props) {
         {insights ? (
           <div className="markdown-insights text-sm leading-relaxed">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{insights}</ReactMarkdown>
+            {loading && (
+              <span className="inline-block w-2 h-4 ml-0.5 bg-indigo-400 animate-pulse align-middle" />
+            )}
           </div>
+        ) : loading ? (
+          <p className="text-sm text-slate-400 flex items-center gap-2">
+            <span className="inline-block w-2 h-4 bg-indigo-400 animate-pulse" />
+            Aguardando primeiro token...
+          </p>
         ) : (
           <p className="text-sm text-slate-400">
             Clique em <em>Gerar com Gemini</em> para receber análise em linguagem natural com base no perfil e no plano de dashboard.
