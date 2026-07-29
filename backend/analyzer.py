@@ -33,12 +33,31 @@ def _clean_records(df: pd.DataFrame, n: int) -> list[dict]:
     return head.to_dict(orient="records")
 
 
-def _infer_semantic(series: pd.Series) -> str:
+_ID_NAME_HINTS = ("id", "codigo", "código", "cod", "matricula", "matrícula", "cpf", "cnpj", "registro")
+
+
+def _looks_like_id(name: str, series: pd.Series) -> bool:
+    non_null = series.dropna()
+    if non_null.empty:
+        return False
+    unique_ratio = non_null.nunique() / len(non_null)
+    name_low = name.lower().strip()
+    name_hit = any(h == name_low or name_low.endswith("_" + h) or name_low.startswith(h + "_") or h in name_low.split() for h in _ID_NAME_HINTS)
+    if unique_ratio >= 0.95:
+        return True
+    if name_hit and unique_ratio >= 0.5:
+        return True
+    return False
+
+
+def _infer_semantic(series: pd.Series, name: str = "") -> str:
     if pd.api.types.is_datetime64_any_dtype(series):
         return "datetime"
     if pd.api.types.is_bool_dtype(series):
         return "boolean"
     if pd.api.types.is_numeric_dtype(series):
+        if _looks_like_id(name, series):
+            return "id"
         return "numeric"
     non_null = series.dropna()
     if non_null.empty:
@@ -53,11 +72,13 @@ def _infer_semantic(series: pd.Series) -> str:
             return "datetime_like"
     except Exception:
         pass
+    if _looks_like_id(name, non_null):
+        return "id"
     return "text"
 
 
 def _column_profile(name: str, s: pd.Series) -> dict:
-    semantic = _infer_semantic(s)
+    semantic = _infer_semantic(s, name)
     total = len(s)
     nulls = int(s.isna().sum())
     prof: dict[str, Any] = {

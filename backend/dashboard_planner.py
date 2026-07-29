@@ -28,18 +28,21 @@ def _build_kpis(profile: dict) -> list[dict]:
         "format": "int",
     }]
     for c in _numeric_cols(profile)[:4]:
-        kpis.append({
-            "id": f"sum_{c['name']}",
-            "label": f"Soma de {c['name']}",
-            "value": c.get("sum"),
-            "format": "num",
-        })
-        kpis.append({
-            "id": f"mean_{c['name']}",
-            "label": f"Média de {c['name']}",
-            "value": c.get("mean"),
-            "format": "num",
-        })
+        s, m = c.get("sum"), c.get("mean")
+        if s is not None:
+            kpis.append({
+                "id": f"sum_{c['name']}",
+                "label": f"Soma de {c['name']}",
+                "value": s,
+                "format": "num",
+            })
+        if m is not None:
+            kpis.append({
+                "id": f"mean_{c['name']}",
+                "label": f"Média de {c['name']}",
+                "value": m,
+                "format": "num",
+            })
     return kpis[:8]
 
 
@@ -64,6 +67,19 @@ def _time_series(df: pd.DataFrame, date_col: str, metric: str, freq: str = "ME")
     ]
 
 
+def _fmt_bin(v: float) -> str:
+    a = abs(v)
+    if a >= 1_000_000_000:
+        return f"{v / 1_000_000_000:.1f}B"
+    if a >= 1_000_000:
+        return f"{v / 1_000_000:.1f}M"
+    if a >= 1_000:
+        return f"{v / 1_000:.1f}k"
+    if a >= 10:
+        return f"{v:.0f}"
+    return f"{v:.2f}"
+
+
 def _distribution(df: pd.DataFrame, col: str, bins: int = 12) -> list[dict]:
     s = pd.to_numeric(df[col], errors="coerce").dropna()
     if s.empty:
@@ -71,7 +87,7 @@ def _distribution(df: pd.DataFrame, col: str, bins: int = 12) -> list[dict]:
     binned = pd.cut(s, bins=bins, include_lowest=True)
     counts = binned.value_counts().sort_index()
     return [
-        {"label": f"{i.left:.2f}–{i.right:.2f}", "value": int(v)}
+        {"label": f"{_fmt_bin(i.left)}–{_fmt_bin(i.right)}", "value": int(v)}
         for i, v in counts.items()
     ]
 

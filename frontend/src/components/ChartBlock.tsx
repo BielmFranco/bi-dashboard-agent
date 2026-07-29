@@ -1,6 +1,7 @@
 "use client";
 
 import type { ChartSpec } from "@/lib/api";
+import { fmtCompactBR, fmtNumberBR, truncate } from "@/lib/format";
 import {
   Bar,
   BarChart,
@@ -36,10 +37,23 @@ function fmtLabel(v: unknown) {
   return String(v);
 }
 
+const tooltipStyle = {
+  background: "#0f172a",
+  border: "1px solid #334155",
+  color: "#e2e8f0",
+} as const;
+
+const numberFormatter = (v: number | string) =>
+  fmtNumberBR(typeof v === "number" ? v : Number(v));
+
+const compactFormatter = (v: number | string) =>
+  fmtCompactBR(typeof v === "number" ? v : Number(v));
+
 export default function ChartBlock({ chart }: { chart: ChartSpec }) {
   const data = chart.data.map((d) => ({
     ...d,
     label: fmtLabel(d.label),
+    labelFull: fmtLabel(d.label),
   }));
 
   return (
@@ -51,37 +65,96 @@ export default function ChartBlock({ chart }: { chart: ChartSpec }) {
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           {chart.type === "bar" ? (
-            <BarChart data={data}>
+            <BarChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
               <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-              <XAxis dataKey="label" stroke="#94a3b8" fontSize={11} interval={0} angle={-25} textAnchor="end" height={60} />
-              <YAxis stroke="#94a3b8" fontSize={11} />
-              <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155" }} />
+              <XAxis
+                dataKey="label"
+                stroke="#94a3b8"
+                fontSize={11}
+                interval={0}
+                angle={-25}
+                textAnchor="end"
+                height={60}
+                tickFormatter={(v) => truncate(String(v), 14)}
+              />
+              <YAxis
+                stroke="#94a3b8"
+                fontSize={11}
+                tickFormatter={compactFormatter}
+              />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(v: number) => [numberFormatter(v), chart.y_label || "Valor"]}
+                labelFormatter={(l) => String(l)}
+              />
               <Bar dataKey="value" fill="#818cf8" radius={[4, 4, 0, 0]} />
             </BarChart>
           ) : chart.type === "line" ? (
-            <LineChart data={data}>
+            <LineChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
               <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-              <XAxis dataKey="label" stroke="#94a3b8" fontSize={11} />
-              <YAxis stroke="#94a3b8" fontSize={11} />
-              <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155" }} />
-              <Line type="monotone" dataKey="value" stroke="#22d3ee" strokeWidth={2} dot={{ r: 3 }} />
+              <XAxis
+                dataKey="label"
+                stroke="#94a3b8"
+                fontSize={11}
+                tickFormatter={(v) => truncate(String(v), 12)}
+              />
+              <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={compactFormatter} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(v: number) => [numberFormatter(v), chart.y_label || "Valor"]}
+              />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="#22d3ee"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
             </LineChart>
           ) : chart.type === "pie" ? (
             <PieChart>
-              <Pie data={data} dataKey="value" nameKey="label" outerRadius={90} label>
+              <Pie
+                data={data}
+                dataKey="value"
+                nameKey="label"
+                outerRadius={90}
+                label={(entry: { label?: string }) => truncate(entry.label ?? "", 12)}
+              >
                 {data.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155" }} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(v: number, _n: string, p: { payload?: { label?: string } }) => [
+                  numberFormatter(v),
+                  p.payload?.label ?? "",
+                ]}
+              />
+              <Legend wrapperStyle={{ fontSize: 11 }} formatter={(v) => truncate(String(v), 18)} />
             </PieChart>
           ) : (
-            <ScatterChart>
+            <ScatterChart margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
               <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
-              <XAxis dataKey="x" stroke="#94a3b8" fontSize={11} name={chart.x_label} />
-              <YAxis dataKey="y" stroke="#94a3b8" fontSize={11} name={chart.y_label} />
-              <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155" }} cursor={{ strokeDasharray: "3 3" }} />
+              <XAxis
+                dataKey="x"
+                stroke="#94a3b8"
+                fontSize={11}
+                name={chart.x_label}
+                tickFormatter={compactFormatter}
+              />
+              <YAxis
+                dataKey="y"
+                stroke="#94a3b8"
+                fontSize={11}
+                name={chart.y_label}
+                tickFormatter={compactFormatter}
+              />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                cursor={{ strokeDasharray: "3 3" }}
+                formatter={(v: number) => numberFormatter(v)}
+              />
               <Scatter data={data} fill="#f472b6" />
             </ScatterChart>
           )}
