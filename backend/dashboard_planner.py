@@ -9,7 +9,10 @@ from analyzer import _safe
 
 
 def _numeric_cols(profile: dict) -> list[dict]:
-    return [c for c in profile["columns"] if c["semantic"] == "numeric"]
+    return [
+        c for c in profile["columns"]
+        if c["semantic"] == "numeric" and c.get("n", 0) - c.get("nulls", 0) > 0
+    ]
 
 
 def _categorical_cols(profile: dict) -> list[dict]:
@@ -29,6 +32,9 @@ def _build_kpis(profile: dict) -> list[dict]:
     }]
     for c in _numeric_cols(profile)[:4]:
         s, m = c.get("sum"), c.get("mean")
+        non_null_count = c.get("n", 0) - c.get("nulls", 0)
+        if non_null_count == 0:
+            continue
         if s is not None:
             kpis.append({
                 "id": f"sum_{c['name']}",

@@ -24,3 +24,106 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Insights markdown styling */
+.markdown-insights h1,
+.markdown-insights h2,
+.markdown-insights h3 {
+  color: #a5b4fc;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+.markdown-insights h2 {
+  font-size: 1rem;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 0.25rem;
+}
+.markdown-insights h3 {
+  font-size: 0.9rem;
+}
+.markdown-insights p {
+  margin: 0.5rem 0;
+}
+.markdown-insights ul,
+.markdown-insights ol {
+  margin: 0.5rem 0 0.5rem 1.25rem;
+  list-style-position: outside;
+}
+.markdown-insights ul {
+  list-style-type: disc;
+}
+.markdown-insights ol {
+  list-style-type: decimal;
+}
+.markdown-insights li {
+  margin: 0.25rem 0;
+}
+.markdown-insights strong {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+.markdown-insights em {
+  color: #cbd5e1;
+}
+.markdown-insights code {
+  background: #1e293b;
+  border: 1px solid #334155;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.85em;
+  color: #fbbf24;
+}
+.markdown-insights pre {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+.markdown-insights pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #e2e8f0;
+}
+.markdown-insights table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.85rem;
+  display: block;
+  overflow-x: auto;
+}
+.markdown-insights thead {
+  background: #1e293b;
+}
+.markdown-insights th,
+.markdown-insights td {
+  border: 1px solid #334155;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+.markdown-insights th {
+  color: #a5b4fc;
+  font-weight: 600;
+}
+.markdown-insights blockquote {
+  border-left: 3px solid #6366f1;
+  padding-left: 0.75rem;
+  color: #cbd5e1;
+  margin: 0.75rem 0;
+}
+.markdown-insights hr {
+  border: 0;
+  border-top: 1px solid #334155;
+  margin: 1rem 0;
+}
+.markdown-insights a {
+  color: #22d3ee;
+  text-decoration: underline;
+}

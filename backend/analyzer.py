@@ -51,6 +51,8 @@ def _looks_like_id(name: str, series: pd.Series) -> bool:
 
 
 def _infer_semantic(series: pd.Series, name: str = "") -> str:
+    if series.dropna().empty:
+        return "empty"
     if pd.api.types.is_datetime64_any_dtype(series):
         return "datetime"
     if pd.api.types.is_bool_dtype(series):
@@ -61,7 +63,7 @@ def _infer_semantic(series: pd.Series, name: str = "") -> str:
         return "numeric"
     non_null = series.dropna()
     if non_null.empty:
-        return "unknown"
+        return "empty"
     nunique = non_null.nunique()
     if nunique <= max(20, int(0.05 * len(non_null))):
         return "categorical"
