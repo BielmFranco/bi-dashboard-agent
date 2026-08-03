@@ -2,10 +2,25 @@
 from __future__ import annotations
 
 import math
+import warnings
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+
+def _try_parse_dates(sample: pd.Series) -> pd.Series:
+    """Parse ambiguous date-like strings without polluting logs.
+
+    Uses `format="mixed"` so pandas parses row-by-row without falling back
+    silently to dateutil (which emits UserWarning every call).
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        try:
+            return pd.to_datetime(sample, errors="coerce", dayfirst=True, format="mixed")
+        except (ValueError, TypeError):
+            return pd.to_datetime(sample, errors="coerce", dayfirst=True)
 
 
 def _safe(v: Any) -> Any:
@@ -69,7 +84,7 @@ def _infer_semantic(series: pd.Series, name: str = "") -> str:
         return "categorical"
     sample = non_null.astype(str).head(50)
     try:
-        parsed = pd.to_datetime(sample, errors="coerce", dayfirst=True)
+        parsed = _try_parse_dates(sample)
         if parsed.notna().mean() > 0.8:
             return "datetime_like"
     except Exception:
@@ -117,7 +132,7 @@ def _column_profile(name: str, s: pd.Series) -> dict:
             {"value": _safe(k), "count": int(v)} for k, v in vc.items()
         ]
     elif semantic in ("datetime", "datetime_like"):
-        parsed = s if semantic == "datetime" else pd.to_datetime(s, errors="coerce", dayfirst=True)
+        parsed = s if semantic == "datetime" else _try_parse_dates(s.astype(str))
         prof["min_date"] = _safe(parsed.min())
         prof["max_date"] = _safe(parsed.max())
     return prof
