@@ -1,0 +1,466 @@
+/* ============================================================
+   Report — dedicated print-optimized styles.
+   Hard-coded light theme; independent of the app's theme tokens.
+   ============================================================ */
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+.report-page {
+  background: #f8fafc;
+  min-height: 100vh;
+  padding: 24px 12px;
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.report-doc {
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
+  background: #ffffff;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ------- Cover ------- */
+
+.report-cover {
+  padding: 40px 44px 32px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #a855f7 100%);
+  color: #ffffff;
+  position: relative;
+}
+.report-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.14) 0%, transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(255, 255, 255, 0.10) 0%, transparent 40%);
+  pointer-events: none;
+}
+.report-cover > * { position: relative; }
+
+.report-cover-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 44px;
+}
+.report-brand { display: flex; align-items: center; gap: 12px; }
+.report-brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.report-brand-name { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.report-brand-sub { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+
+.report-cover-meta {
+  text-align: right;
+  font-size: 11px;
+  opacity: 0.85;
+}
+.report-cover-time { font-family: var(--font-geist-mono); opacity: 0.65; }
+
+.report-cover-title { margin-bottom: 36px; }
+.report-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  opacity: 0.75;
+  margin-bottom: 8px;
+}
+.report-cover-title h1 {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-family: var(--font-geist-mono), monospace;
+  word-break: break-all;
+}
+
+.report-cover-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+.report-cover-stat-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+.report-cover-stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------- Sections ------- */
+
+.report-section {
+  padding: 36px 44px;
+  border-top: 1px solid #e2e8f0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.report-section-charts,
+.report-section-insights {
+  page-break-inside: auto;
+  break-inside: auto;
+}
+
+.report-section-head {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: flex-start;
+}
+.report-section-num {
+  flex-shrink: 0;
+  font-family: var(--font-geist-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: #4f46e5;
+  background: #eef2ff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.06em;
+}
+.report-section-head h2 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #0f172a;
+  margin: 0;
+}
+.report-section-head p {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* ------- KPIs ------- */
+
+.report-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.report-kpi {
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  position: relative;
+}
+.report-kpi::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #4f46e5, #7c3aed);
+  border-radius: 10px 0 0 10px;
+}
+.report-kpi-label {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+.report-kpi-value {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+/* ------- Profile ------- */
+
+.report-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.report-profile-stats > div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.report-stat-label {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+.report-stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.report-table thead {
+  background: #f1f5f9;
+}
+.report-table th {
+  text-align: left;
+  padding: 9px 12px;
+  font-weight: 600;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+}
+.report-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #0f172a;
+}
+.report-table tr:last-child td { border-bottom: none; }
+.report-mono {
+  font-family: var(--font-geist-mono);
+  font-size: 10.5px;
+}
+.report-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-geist-mono);
+}
+.report-badge {
+  display: inline-block;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+.report-alerts {
+  background: #fef3c7;
+  border-left: 3px solid #d97706;
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+.report-alerts-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #92400e;
+  margin-bottom: 6px;
+}
+.report-alerts ul {
+  font-size: 11px;
+  color: #78350f;
+  padding-left: 18px;
+  margin: 0;
+}
+.report-alerts li { margin: 2px 0; }
+
+/* ------- Charts ------- */
+
+.report-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.report-chart {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.report-chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  margin-bottom: 3px;
+}
+.report-chart-desc {
+  font-size: 10.5px;
+  color: #64748b;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.report-chart-body {
+  height: 210px;
+}
+
+/* ------- Insights ------- */
+
+.report-insights-body {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 24px 28px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #0f172a;
+}
+.report-insights-body h1,
+.report-insights-body h2,
+.report-insights-body h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 18px 0 8px;
+  color: #0f172a;
+}
+.report-insights-body h2 {
+  font-size: 14px;
+  color: #4f46e5;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 4px;
+  margin-top: 22px;
+}
+.report-insights-body h2:first-child { margin-top: 0; }
+.report-insights-body h3 { font-size: 12.5px; }
+.report-insights-body p { margin: 6px 0; }
+.report-insights-body ul,
+.report-insights-body ol { margin: 6px 0 6px 20px; }
+.report-insights-body ul { list-style: disc; }
+.report-insights-body ol { list-style: decimal; }
+.report-insights-body li { margin: 2px 0; }
+.report-insights-body strong { font-weight: 600; color: #0f172a; }
+.report-insights-body em { color: #475569; }
+.report-insights-body code {
+  background: #e0e7ff;
+  border: 1px solid #c7d2fe;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  color: #4338ca;
+  font-family: var(--font-geist-mono);
+}
+.report-insights-body pre {
+  background: #0f172a;
+  color: #f1f5f9;
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-size: 10.5px;
+}
+.report-insights-body pre code {
+  background: transparent;
+  color: inherit;
+  border: none;
+  padding: 0;
+}
+.report-insights-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin: 10px 0;
+}
+.report-insights-body th,
+.report-insights-body td {
+  border: 1px solid #e2e8f0;
+  padding: 6px 10px;
+  text-align: left;
+}
+.report-insights-body th {
+  background: #f1f5f9;
+  font-weight: 600;
+}
+.report-insights-body blockquote {
+  border-left: 3px solid #6366f1;
+  padding-left: 12px;
+  color: #475569;
+  margin: 10px 0;
+}
+.report-insights-body hr {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin: 14px 0;
+}
+
+/* ------- Footer ------- */
+
+.report-footer {
+  padding: 20px 44px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+/* ------- Empty ------- */
+
+.report-empty {
+  padding: 60px 40px;
+  text-align: center;
+  color: #64748b;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+.report-empty code {
+  font-family: var(--font-geist-mono);
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ------- Print ------- */
+
+@media print {
+  html, body { background: #ffffff; }
+  .report-page { padding: 0; background: #ffffff; }
+  .report-doc {
+    box-shadow: none;
+    border-radius: 0;
+    max-width: 100%;
+  }
+  .report-cover,
+  .report-section,
+  .report-footer {
+    padding-left: 20mm;
+    padding-right: 20mm;
+  }
+  .report-cover { padding-top: 20mm; padding-bottom: 18mm; }
+  .report-chart, .report-kpi { break-inside: avoid; }
+  .report-section-head { break-after: avoid; }
+}

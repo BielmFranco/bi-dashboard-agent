@@ -107,6 +107,9 @@ export default function Home() {
 
   async function handleExport() {
     if (!fileId || exporting) return;
+    // Open the report page in a new tab immediately so the user can browse
+    // it while the PDF renders in the background.
+    window.open(`/report/${fileId}`, "_blank", "noopener,noreferrer");
     setExporting(true);
     const promise = exportPdf(fileId, { insights: insightsText ?? undefined }).then(
       ({ blob, filename }) => {
@@ -122,7 +125,7 @@ export default function Home() {
     );
     try {
       await toast.promise(promise, {
-        loading: "Renderizando PDF...",
+        loading: "Renderizando PDF em segundo plano...",
         success: "PDF baixado",
         error: (e) => `Falha no PDF: ${e instanceof Error ? e.message : e}`,
       });

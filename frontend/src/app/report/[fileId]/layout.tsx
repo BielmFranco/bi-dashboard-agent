@@ -7,7 +7,10 @@ export const metadata: Metadata = {
 
 export default function ReportLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="report-scope light" style={{ colorScheme: "light" }}>
+    <div
+      className="report-scope"
+      style={{ colorScheme: "light", background: "#f8fafc", minHeight: "100vh" }}
+    >
       {children}
     </div>
   );

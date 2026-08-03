@@ -1,9 +1,10 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import KPICard from "@/components/KPICard";
-import ChartBlock from "@/components/ChartBlock";
-import ProfileSummary from "@/components/ProfileSummary";
+import ReportKPI from "@/components/report/ReportKPI";
+import ReportChart from "@/components/report/ReportChart";
+import ReportProfile from "@/components/report/ReportProfile";
 import type { Plan, Profile } from "@/lib/api";
+import "./report.css";
 
 type ReportData = {
   profile: Profile;
@@ -33,8 +34,8 @@ export default async function ReportPage({
 
   if (!data) {
     return (
-      <div className="p-12 text-center text-slate-500">
-        Análise não encontrada para <code>{fileId}</code>.
+      <div className="report-empty">
+        <p>Análise não encontrada para <code>{fileId}</code>.</p>
       </div>
     );
   }
@@ -46,100 +47,114 @@ export default async function ReportPage({
     month: "long",
     year: "numeric",
   });
+  const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="report-root bg-white text-slate-900 min-h-screen">
-      <style>{`
-        @page { size: A4; margin: 14mm 12mm; }
-        .report-root {
-          font-family: var(--font-inter), system-ui, sans-serif;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-        .report-section { page-break-inside: avoid; break-inside: avoid; }
-        .report-header { border-bottom: 2px solid #6366f1; padding-bottom: 12px; margin-bottom: 20px; }
-        .report-insights h2 { color: #4f46e5; }
-      `}</style>
-
-      <div className="max-w-[210mm] mx-auto p-10 space-y-8">
-        <header className="report-header report-section">
-          <div className="flex items-baseline justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-widest text-slate-400 font-medium">
-                Relatório Executivo
-              </p>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900 mt-1">
-                BI Dashboard Agent
-              </h1>
+    <div className="report-page">
+      <article className="report-doc">
+        <header className="report-cover">
+          <div className="report-cover-top">
+            <div className="report-brand">
+              <div className="report-brand-mark">BI</div>
+              <div>
+                <p className="report-brand-name">BI Dashboard Agent</p>
+                <p className="report-brand-sub">Relatório executivo automatizado</p>
+              </div>
             </div>
-            <div className="text-right text-xs text-slate-500">
-              <p className="font-mono">{filename ?? "—"}</p>
+            <div className="report-cover-meta">
               <p>{dateStr}</p>
+              <p className="report-cover-time">{timeStr}</p>
             </div>
           </div>
-          <div className="mt-3 flex gap-4 text-xs text-slate-600">
-            <span>
-              <strong className="text-slate-900">{profile.rows.toLocaleString("pt-BR")}</strong>{" "}
-              linhas
-            </span>
-            <span>
-              <strong className="text-slate-900">{profile.cols}</strong> colunas
-            </span>
-            {profile.duplicates > 0 && (
-              <span className="text-amber-600">
-                <strong>{profile.duplicates}</strong> duplicadas
-              </span>
-            )}
+
+          <div className="report-cover-title">
+            <p className="report-eyebrow">Análise da base</p>
+            <h1>{filename ?? "Planilha enviada"}</h1>
+          </div>
+
+          <div className="report-cover-stats">
+            <div>
+              <p className="report-cover-stat-label">Registros</p>
+              <p className="report-cover-stat-value">
+                {profile.rows.toLocaleString("pt-BR")}
+              </p>
+            </div>
+            <div>
+              <p className="report-cover-stat-label">Colunas</p>
+              <p className="report-cover-stat-value">{profile.cols}</p>
+            </div>
+            <div>
+              <p className="report-cover-stat-label">Indicadores</p>
+              <p className="report-cover-stat-value">{plan.kpis.length}</p>
+            </div>
+            <div>
+              <p className="report-cover-stat-label">Visualizações</p>
+              <p className="report-cover-stat-value">{plan.charts.length}</p>
+            </div>
           </div>
         </header>
 
         <section className="report-section">
-          <h2 className="text-sm uppercase tracking-widest text-slate-500 font-medium mb-3">
-            Indicadores principais
-          </h2>
-          <div className="grid grid-cols-4 gap-3">
-            {plan.kpis.map((k, i) => (
-              <KPICard key={k.id} kpi={k} index={i} />
+          <div className="report-section-head">
+            <span className="report-section-num">01</span>
+            <div>
+              <h2>Indicadores principais</h2>
+              <p>KPIs derivados automaticamente das colunas numéricas.</p>
+            </div>
+          </div>
+          <div className="report-kpi-grid">
+            {plan.kpis.map((k) => (
+              <ReportKPI key={k.id} kpi={k} />
             ))}
           </div>
         </section>
 
         <section className="report-section">
-          <h2 className="text-sm uppercase tracking-widest text-slate-500 font-medium mb-3">
-            Resumo da base
-          </h2>
-          <ProfileSummary profile={profile} />
+          <div className="report-section-head">
+            <span className="report-section-num">02</span>
+            <div>
+              <h2>Perfil da base</h2>
+              <p>Tipos detectados, cardinalidade e qualidade por coluna.</p>
+            </div>
+          </div>
+          <ReportProfile profile={profile} />
         </section>
 
-        <section>
-          <h2 className="text-sm uppercase tracking-widest text-slate-500 font-medium mb-3">
-            Visualizações
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
-            {plan.charts.map((c, i) => (
-              <div key={c.id} className="report-section">
-                <ChartBlock chart={c} index={i} />
-              </div>
+        <section className="report-section report-section-charts">
+          <div className="report-section-head">
+            <span className="report-section-num">03</span>
+            <div>
+              <h2>Visualizações</h2>
+              <p>Gráficos escolhidos pelo motor de regras conforme os dados.</p>
+            </div>
+          </div>
+          <div className="report-chart-grid">
+            {plan.charts.map((c) => (
+              <ReportChart key={c.id} chart={c} />
             ))}
           </div>
         </section>
 
         {insights && (
-          <section className="report-section report-insights">
-            <h2 className="text-sm uppercase tracking-widest text-slate-500 font-medium mb-3">
-              Análise estratégica
-            </h2>
-            <div className="markdown-insights rounded-lg border border-slate-200 bg-slate-50 p-6">
+          <section className="report-section report-section-insights">
+            <div className="report-section-head">
+              <span className="report-section-num">04</span>
+              <div>
+                <h2>Análise estratégica</h2>
+                <p>Interpretação gerada por IA com base no perfil e no plano.</p>
+              </div>
+            </div>
+            <div className="report-insights-body">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{insights}</ReactMarkdown>
             </div>
           </section>
         )}
 
-        <footer className="pt-6 border-t border-slate-200 flex justify-between text-[10px] text-slate-400">
+        <footer className="report-footer">
           <span>© BI Dashboard Agent</span>
           <span>Gerado com Gemini · Dados 100% baseados no arquivo enviado</span>
         </footer>
-      </div>
+      </article>
     </div>
   );
 }
