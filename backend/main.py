@@ -8,7 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 import cache as disk_cache
@@ -16,6 +16,7 @@ from analyzer import load_dataframe, profile_dataframe
 from dashboard_planner import build_plan
 from llm import chat as llm_chat
 from llm import generate_insights, generate_insights_stream
+from pdf_export import render_pdf, PdfExportError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -132,6 +133,51 @@ def get_analysis(file_id: str):
     if "profile" not in entry or "plan" not in entry:
         raise HTTPException(404, "Análise não encontrada. Rode POST /analyze.")
     return {"profile": entry["profile"], "plan": entry["plan"], "filename": entry.get("filename")}
+
+
+@app.get("/report_data/{file_id}")
+def report_data(file_id: str):
+    """Data feed used by the /report/{fileId} Next.js print page."""
+    entry = _load_cached(file_id)
+    if "profile" not in entry or "plan" not in entry:
+        raise HTTPException(404, "Análise não encontrada.")
+    return {
+        "profile": entry["profile"],
+        "plan": entry["plan"],
+        "filename": entry.get("filename"),
+        "insights": entry.get("insights"),
+    }
+
+
+class ExportBody(BaseModel):
+    insights: str | None = None
+    frontend_url: str | None = None
+
+
+@app.post("/export/{file_id}")
+def export_pdf(file_id: str, body: ExportBody | None = None):
+    entry = _load_cached(file_id)
+    if "profile" not in entry or "plan" not in entry:
+        raise HTTPException(400, "Rode /analyze antes.")
+    if body and body.insights:
+        entry["insights"] = body.insights
+        _persist(file_id)
+    frontend = (body.frontend_url if body else None) or os.environ.get(
+        "FRONTEND_URL", "http://localhost:3000"
+    )
+    try:
+        pdf_bytes = render_pdf(f"{frontend.rstrip('/')}/report/{file_id}")
+    except PdfExportError as e:
+        log.exception("PDF export failed")
+        raise HTTPException(500, str(e))
+    safe_name = (entry.get("filename") or "relatorio").rsplit(".", 1)[0]
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}_relatorio.pdf"',
+        },
+    )
 
 
 @app.post("/insights/{file_id}")

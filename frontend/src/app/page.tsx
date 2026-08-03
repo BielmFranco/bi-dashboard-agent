@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FileText, Loader2, RotateCw } from "lucide-react";
+import { Download, FileText, Loader2, RotateCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Chat from "@/components/Chat";
@@ -12,10 +12,12 @@ import Navbar from "@/components/Navbar";
 import ProfileSummary from "@/components/ProfileSummary";
 import Upload from "@/components/Upload";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   analyze,
   deleteFile,
+  exportPdf,
   getAnalysis,
   insightsStream,
   type Plan,
@@ -34,6 +36,7 @@ export default function Home() {
   const [insightsText, setInsightsText] = useState<string | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [restoring, setRestoring] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem(LS_KEY) : null;
@@ -102,6 +105,32 @@ export default function Home() {
     }
   }
 
+  async function handleExport() {
+    if (!fileId || exporting) return;
+    setExporting(true);
+    const promise = exportPdf(fileId, { insights: insightsText ?? undefined }).then(
+      ({ blob, filename }) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      },
+    );
+    try {
+      await toast.promise(promise, {
+        loading: "Renderizando PDF...",
+        success: "PDF baixado",
+        error: (e) => `Falha no PDF: ${e instanceof Error ? e.message : e}`,
+      });
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function reset() {
     const oldId = fileId;
     setFileId(null);
@@ -159,13 +188,29 @@ export default function Home() {
                 </span>
               )}
               {profile && !analyzing && (
-                <span className="ml-auto inline-flex items-center gap-3 text-xs text-[var(--muted-foreground)]">
-                  <span className="tabular-nums">
-                    {profile.rows.toLocaleString("pt-BR")} linhas
+                <div className="ml-auto flex items-center gap-3">
+                  <span className="inline-flex items-center gap-3 text-xs text-[var(--muted-foreground)]">
+                    <span className="tabular-nums">
+                      {profile.rows.toLocaleString("pt-BR")} linhas
+                    </span>
+                    <span className="w-px h-3 bg-[var(--border)]" />
+                    <span className="tabular-nums">{profile.cols} colunas</span>
                   </span>
-                  <span className="w-px h-3 bg-[var(--border)]" />
-                  <span className="tabular-nums">{profile.cols} colunas</span>
-                </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExport}
+                    disabled={exporting}
+                    className="h-8"
+                  >
+                    {exporting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                    <span className="text-xs">{exporting ? "Gerando..." : "Baixar PDF"}</span>
+                  </Button>
+                </div>
               )}
             </motion.div>
 

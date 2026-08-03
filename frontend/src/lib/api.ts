@@ -74,6 +74,45 @@ export async function deleteFile(fileId: string) {
   });
 }
 
+export async function exportPdf(
+  fileId: string,
+  opts?: { insights?: string; frontendUrl?: string },
+): Promise<{ blob: Blob; filename: string }> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 120000);
+  try {
+    const r = await fetch(`${BASE}/export/${fileId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        insights: opts?.insights ?? null,
+        frontend_url:
+          opts?.frontendUrl ??
+          (typeof window !== "undefined" ? window.location.origin : null),
+      }),
+      signal: ctrl.signal,
+    });
+    if (!r.ok) {
+      const ct = r.headers.get("content-type") || "";
+      let msg = `HTTP ${r.status}`;
+      try {
+        msg = ct.includes("application/json")
+          ? (await r.json()).detail || msg
+          : (await r.text()).slice(0, 400) || msg;
+      } catch {
+        /* keep */
+      }
+      throw new Error(`[${r.status}] ${msg}`);
+    }
+    const cd = r.headers.get("Content-Disposition") || "";
+    const match = /filename="?([^"]+)"?/i.exec(cd);
+    const filename = match?.[1] ?? "relatorio.pdf";
+    return { blob: await r.blob(), filename };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 export async function insights(fileId: string) {
   return request<{ insights: string }>(`/insights/${fileId}`, {
     method: "POST",

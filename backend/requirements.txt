@@ -7,4 +7,5 @@ openpyxl==3.1.5
 scipy==1.14.1
 google-genai>=1.0.0
 httpx>=0.28.1
+playwright>=1.49.0
 python-dotenv==1.0.1
