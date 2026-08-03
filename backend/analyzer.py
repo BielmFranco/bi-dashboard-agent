@@ -52,17 +52,29 @@ _ID_NAME_HINTS = ("id", "codigo", "código", "cod", "matricula", "matrícula", "
 
 
 def _looks_like_id(name: str, series: pd.Series) -> bool:
+    """Detect identifier columns conservatively.
+
+    Rule: name must match an ID hint token. Cardinality alone is too
+    ambiguous — a unique-per-row numeric column may be a measurement
+    (age, salary, cost) rather than an identifier. Falsely classifying
+    a metric as ID silently removes it from KPIs and charts.
+    """
     non_null = series.dropna()
     if non_null.empty:
         return False
-    unique_ratio = non_null.nunique() / len(non_null)
     name_low = name.lower().strip()
-    name_hit = any(h == name_low or name_low.endswith("_" + h) or name_low.startswith(h + "_") or h in name_low.split() for h in _ID_NAME_HINTS)
-    if unique_ratio >= 0.95:
-        return True
-    if name_hit and unique_ratio >= 0.5:
-        return True
-    return False
+    name_hit = any(
+        h == name_low
+        or name_low.endswith("_" + h)
+        or name_low.startswith(h + "_")
+        or h in name_low.split()
+        or name_low.endswith(h)
+        for h in _ID_NAME_HINTS
+    )
+    if not name_hit:
+        return False
+    unique_ratio = non_null.nunique() / len(non_null)
+    return unique_ratio >= 0.6
 
 
 def _infer_semantic(series: pd.Series, name: str = "") -> str:
@@ -79,6 +91,10 @@ def _infer_semantic(series: pd.Series, name: str = "") -> str:
     non_null = series.dropna()
     if non_null.empty:
         return "empty"
+    # Check ID before categorical: a matricula/cpf/codigo column can have
+    # low nunique on tiny samples but is still an identifier by intent.
+    if _looks_like_id(name, non_null):
+        return "id"
     nunique = non_null.nunique()
     if nunique <= max(20, int(0.05 * len(non_null))):
         return "categorical"
@@ -89,8 +105,6 @@ def _infer_semantic(series: pd.Series, name: str = "") -> str:
             return "datetime_like"
     except Exception:
         pass
-    if _looks_like_id(name, non_null):
-        return "id"
     return "text"
 
 
@@ -168,14 +182,20 @@ def profile_dataframe(df: pd.DataFrame, sample_n: int = 20) -> dict:
 def load_dataframe(path: str) -> pd.DataFrame:
     lower = path.lower()
     if lower.endswith(".csv"):
-        for sep in [",", ";", "\t", "|"]:
-            try:
-                df = pd.read_csv(path, sep=sep, encoding="utf-8")
+        first_ok: pd.DataFrame | None = None
+        for enc in ("utf-8", "latin-1", "cp1252"):
+            for sep in (",", ";", "\t", "|"):
+                try:
+                    df = pd.read_csv(path, sep=sep, encoding=enc)
+                except Exception:
+                    continue
                 if df.shape[1] > 1:
                     return df
-            except Exception:
-                continue
-        return pd.read_csv(path, encoding="latin-1", sep=None, engine="python")
+                if first_ok is None and df.shape[1] == 1 and df.shape[0] > 0:
+                    first_ok = df
+        if first_ok is not None:
+            return first_ok
+        raise ValueError(f"Não foi possível decodificar CSV: {path}")
     if lower.endswith((".xlsx", ".xls", ".xlsm")):
         return pd.read_excel(path)
     if lower.endswith(".tsv"):
