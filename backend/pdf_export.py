@@ -34,7 +34,7 @@ def render_pdf(url: str, wait_ms: int = 2500) -> bytes:
             )
             try:
                 context = browser.new_context(
-                    viewport={"width": 1240, "height": 1754},
+                    viewport={"width": 1754, "height": 1240},
                     device_scale_factor=2,
                 )
                 page = context.new_page()
@@ -42,8 +42,9 @@ def render_pdf(url: str, wait_ms: int = 2500) -> bytes:
                 page.wait_for_timeout(wait_ms)
                 pdf: Optional[bytes] = page.pdf(
                     format="A4",
+                    landscape=True,
                     print_background=True,
-                    margin={"top": "12mm", "right": "10mm", "bottom": "12mm", "left": "10mm"},
+                    margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
                     prefer_css_page_size=True,
                 )
                 if not pdf:
