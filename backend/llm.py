@@ -39,16 +39,28 @@ def model_id() -> str:
     return os.environ.get("MODEL_ID", "gemini-2.0-flash")
 
 
+def _base_config(system: str, max_tokens: int) -> types.GenerateContentConfig:
+    """Config shared by sync + stream calls.
+
+    `max_output_tokens` must budget both:
+      - `thinking` tokens (Gemini 2.5+ silently consumes them for chain-of-thought)
+      - visible response tokens
+    Gemini flash uses ~2500-3000 tokens on thinking, so budget stays generous.
+    Setting `thinking_budget=0` is rejected by gemini-flash-latest (400 INVALID_ARGUMENT).
+    """
+    return types.GenerateContentConfig(
+        system_instruction=system,
+        max_output_tokens=max_tokens,
+        temperature=0.4,
+    )
+
+
 def _call(system: str, contents: list[types.Content], max_tokens: int) -> str:
     try:
         resp = client().models.generate_content(
             model=model_id(),
             contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=system,
-                max_output_tokens=max_tokens,
-                temperature=0.4,
-            ),
+            config=_base_config(system, max_tokens),
         )
         text = resp.text or ""
         if not text:
@@ -114,7 +126,7 @@ def _build_insights_prompt(profile: dict, plan: dict, sample_n: int = 20) -> str
 def generate_insights(profile: dict, plan: dict, sample_n: int = 20) -> str:
     user = _build_insights_prompt(profile, plan, sample_n)
     log.info("Insights request: model=%s user_chars=%d", model_id(), len(user))
-    return _call(SYSTEM_PROMPT, [_text_content("user", user)], max_tokens=3000)
+    return _call(SYSTEM_PROMPT, [_text_content("user", user)], max_tokens=8000)
 
 
 def _translate_error(e: Exception) -> RuntimeError:
@@ -151,11 +163,7 @@ def generate_insights_stream(profile: dict, plan: dict, sample_n: int = 20) -> I
         stream = client().models.generate_content_stream(
             model=model_id(),
             contents=[_text_content("user", user)],
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                max_output_tokens=3000,
-                temperature=0.4,
-            ),
+            config=_base_config(SYSTEM_PROMPT, max_tokens=8000),
         )
         for chunk in stream:
             text = getattr(chunk, "text", None)
