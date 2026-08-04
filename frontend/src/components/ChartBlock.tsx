@@ -63,11 +63,15 @@ export default function ChartBlock({ chart, index = 0 }: Props) {
     color: "var(--card-foreground)",
     fontSize: 12,
     padding: "8px 10px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
   } as const;
-
-  const chartLabel = ({ payload }: { payload?: { label?: string } }) =>
-    truncate(payload?.label ?? "", 12);
+  const tooltipItemStyle = { color: "var(--card-foreground)" } as const;
+  const tooltipLabelStyle = {
+    color: "var(--muted-foreground)",
+    fontSize: 11,
+    marginBottom: 4,
+    fontWeight: 500,
+  } as const;
 
   return (
     <motion.div
@@ -107,6 +111,8 @@ export default function ChartBlock({ chart, index = 0 }: Props) {
                 <Tooltip
                   cursor={{ fill: "var(--muted)", opacity: 0.4 }}
                   contentStyle={tooltipStyle}
+                  itemStyle={tooltipItemStyle}
+                  labelStyle={tooltipLabelStyle}
                   formatter={(v: number) => [numberFormatter(v), chart.y_label || "Valor"]}
                 />
                 <Bar dataKey="value" fill="var(--primary)" radius={[6, 6, 0, 0]} />
@@ -131,6 +137,8 @@ export default function ChartBlock({ chart, index = 0 }: Props) {
                 />
                 <Tooltip
                   contentStyle={tooltipStyle}
+                  itemStyle={tooltipItemStyle}
+                  labelStyle={tooltipLabelStyle}
                   formatter={(v: number) => [numberFormatter(v), chart.y_label || "Valor"]}
                 />
                 <Line
@@ -148,11 +156,13 @@ export default function ChartBlock({ chart, index = 0 }: Props) {
                   data={data}
                   dataKey="value"
                   nameKey="label"
-                  outerRadius={82}
-                  innerRadius={44}
+                  cx="50%"
+                  cy="42%"
+                  outerRadius="70%"
+                  innerRadius="42%"
                   paddingAngle={2}
-                  label={chartLabel}
                   labelLine={false}
+                  isAnimationActive={false}
                 >
                   {data.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="var(--card)" strokeWidth={2} />
@@ -160,14 +170,19 @@ export default function ChartBlock({ chart, index = 0 }: Props) {
                 </Pie>
                 <Tooltip
                   contentStyle={tooltipStyle}
+                  itemStyle={tooltipItemStyle}
+                  labelStyle={tooltipLabelStyle}
                   formatter={(v: number, _n: string, p: { payload?: { label?: string } }) => [
                     numberFormatter(v),
                     p.payload?.label ?? "",
                   ]}
                 />
                 <Legend
-                  wrapperStyle={{ fontSize: 11 }}
-                  formatter={(v) => truncate(String(v), 16)}
+                  wrapperStyle={{ fontSize: 10.5, paddingTop: 4 }}
+                  iconSize={9}
+                  verticalAlign="bottom"
+                  align="center"
+                  formatter={(v) => truncate(String(v), 14)}
                 />
               </PieChart>
             ) : (
@@ -193,7 +208,9 @@ export default function ChartBlock({ chart, index = 0 }: Props) {
                 />
                 <Tooltip
                   contentStyle={tooltipStyle}
-                  cursor={{ strokeDasharray: "3 3" }}
+                  itemStyle={tooltipItemStyle}
+                  labelStyle={tooltipLabelStyle}
+                  cursor={{ strokeDasharray: "3 3", stroke: "var(--muted-foreground)" }}
                   formatter={(v: number) => numberFormatter(v)}
                 />
                 <Scatter data={data} fill="var(--primary)" fillOpacity={0.7} />
