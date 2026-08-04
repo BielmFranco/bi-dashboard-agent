@@ -201,10 +201,11 @@
 
 .report-kpi-grid {
   display: grid;
-  /* Auto-fit forces all KPIs into one row when width allows.
-     Landscape body ~1000px / 130px min = 7 columns fit. */
-  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  /* Fixed medium-width cards. When there are few KPIs, right space is
+     empty (intentional) — better than stretching them to fill width. */
+  grid-template-columns: repeat(auto-fill, minmax(150px, 170px));
   gap: 10px;
+  justify-content: start;
 }
 .report-kpi {
   padding: 12px 12px 12px 16px;

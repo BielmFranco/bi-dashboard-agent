@@ -65,9 +65,6 @@ export default function ReportProfile({ profile }: { profile: Profile }) {
             <th>Tipo</th>
             <th className="report-num">Nulos</th>
             <th className="report-num">Únicos</th>
-            <th className="report-num">Mínimo</th>
-            <th className="report-num">Máximo</th>
-            <th className="report-num">Média</th>
           </tr>
         </thead>
         <tbody>
@@ -83,15 +80,8 @@ export default function ReportProfile({ profile }: { profile: Profile }) {
                 </span>
               </td>
               <td className="report-num">{c.null_pct}%</td>
-              <td className="report-num">{fmtNumberBR(c.unique, { maximumFractionDigits: 0 })}</td>
               <td className="report-num">
-                {c.min !== undefined && c.min !== null ? fmtNumberBR(c.min) : "—"}
-              </td>
-              <td className="report-num">
-                {c.max !== undefined && c.max !== null ? fmtNumberBR(c.max) : "—"}
-              </td>
-              <td className="report-num">
-                {c.mean !== undefined && c.mean !== null ? fmtNumberBR(c.mean) : "—"}
+                {fmtNumberBR(c.unique, { maximumFractionDigits: 0 })}
               </td>
             </tr>
           ))}
