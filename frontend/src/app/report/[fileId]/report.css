@@ -390,9 +390,11 @@
   font-size: 11.5px;
   line-height: 1.7;
   color: #0f172a;
-  column-count: 2;
+  columns: 2 320px;
   column-gap: 32px;
   column-rule: 1px solid #e2e8f0;
+  column-fill: balance;
+  overflow: hidden;
 }
 .report-insights-body > *:first-child { margin-top: 0; }
 .report-insights-body h1,
@@ -403,6 +405,7 @@
   margin: 16px 0 6px;
   color: #0f172a;
   break-after: avoid;
+  page-break-after: avoid;
 }
 .report-insights-body h2 {
   font-size: 13px;
@@ -410,10 +413,14 @@
   border-bottom: 1px solid #e2e8f0;
   padding-bottom: 3px;
   margin-top: 18px;
-  break-before: column;
-  break-after: avoid;
+  break-inside: avoid;
 }
-.report-insights-body h2:first-child { margin-top: 0; break-before: auto; }
+.report-insights-body h2:first-child { margin-top: 0; }
+.report-insights-body p,
+.report-insights-body ul,
+.report-insights-body ol {
+  break-inside: avoid-column;
+}
 .report-insights-body h3 { font-size: 12px; }
 .report-insights-body p { margin: 5px 0; }
 .report-insights-body ul,
