@@ -1,8 +1,7 @@
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import ReportKPI from "@/components/report/ReportKPI";
 import ReportChart from "@/components/report/ReportChart";
 import ReportProfile from "@/components/report/ReportProfile";
+import InsightsGrid from "@/components/report/InsightsGrid";
 import type { Plan, Profile } from "@/lib/api";
 import "./report.css";
 
@@ -151,9 +150,7 @@ export default async function ReportPage({
                   <p>Interpretação gerada por IA com base no perfil e no plano.</p>
                 </div>
               </div>
-              <div className="report-insights-body">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{insights}</ReactMarkdown>
-              </div>
+              <InsightsGrid markdown={insights} />
             </section>
           )}
         </div>

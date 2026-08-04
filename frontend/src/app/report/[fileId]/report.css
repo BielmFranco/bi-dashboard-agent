@@ -383,59 +383,66 @@
   height: 155px;
 }
 
-/* ================= Insights (full width bottom) ================= */
+/* ================= Insights grid (cards per section) ================= */
 
-.report-insights-body {
-  background: #f8fafc;
+.report-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+.report-insights-card {
+  background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 20px 24px;
-  font-size: 10.5px;
-  line-height: 1.6;
-  color: #0f172a;
-  columns: 3 260px;
-  column-gap: 26px;
-  column-rule: 1px solid #e2e8f0;
-  column-fill: balance;
-  overflow: hidden;
+  padding: 16px 18px 14px 20px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  position: relative;
 }
-.report-insights-body > *:first-child { margin-top: 0; }
-.report-insights-body h1,
-.report-insights-body h2,
-.report-insights-body h3 {
+.report-insights-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 14px; bottom: 14px;
+  width: 3px;
+  background: linear-gradient(180deg, #4f46e5, #7c3aed);
+  border-radius: 0 3px 3px 0;
+}
+.report-insights-content {
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: #0f172a;
+}
+.report-insights-content > *:first-child { margin-top: 0; }
+.report-insights-content h1,
+.report-insights-content h2,
+.report-insights-content h3 {
   font-weight: 600;
   letter-spacing: -0.01em;
-  margin: 16px 0 6px;
   color: #0f172a;
   break-after: avoid;
   page-break-after: avoid;
 }
-.report-insights-body h2 {
-  font-size: 12px;
+.report-insights-content h2 {
+  font-size: 12.5px;
   color: #4f46e5;
+  margin: 0 0 8px;
+  padding-bottom: 4px;
   border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 3px;
-  margin-top: 14px;
-  break-inside: avoid;
 }
-.report-insights-body h2:first-child { margin-top: 0; }
-.report-insights-body h3 { font-size: 11px; }
-.report-insights-body p,
-.report-insights-body ul,
-.report-insights-body ol {
-  break-inside: avoid-column;
+.report-insights-content h3 {
+  font-size: 11px;
+  margin: 10px 0 4px;
 }
-.report-insights-body h3 { font-size: 12px; }
-.report-insights-body p { margin: 5px 0; }
-.report-insights-body ul,
-.report-insights-body ol { margin: 5px 0 5px 18px; }
-.report-insights-body ul { list-style: disc; }
-.report-insights-body ol { list-style: decimal; }
-.report-insights-body li { margin: 1px 0; }
-.report-insights-body strong { font-weight: 600; color: #0f172a; }
-.report-insights-body em { color: #475569; }
-.report-insights-body code {
-  background: #e0e7ff;
+.report-insights-content p { margin: 4px 0; }
+.report-insights-content ul,
+.report-insights-content ol { margin: 4px 0 6px 16px; }
+.report-insights-content ul { list-style: disc; }
+.report-insights-content ol { list-style: decimal; }
+.report-insights-content li { margin: 2px 0; }
+.report-insights-content strong { font-weight: 600; color: #0f172a; }
+.report-insights-content em { color: #475569; font-style: italic; }
+.report-insights-content code {
+  background: #eef2ff;
   border: 1px solid #c7d2fe;
   padding: 1px 5px;
   border-radius: 4px;
@@ -443,7 +450,7 @@
   color: #4338ca;
   font-family: var(--font-geist-mono);
 }
-.report-insights-body pre {
+.report-insights-content pre {
   background: #0f172a;
   color: #f1f5f9;
   border-radius: 8px;
@@ -451,40 +458,42 @@
   overflow-x: auto;
   font-size: 10px;
   break-inside: avoid;
+  margin: 6px 0;
 }
-.report-insights-body pre code {
+.report-insights-content pre code {
   background: transparent;
   color: inherit;
   border: none;
   padding: 0;
 }
-.report-insights-body table {
+.report-insights-content table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 10.5px;
-  margin: 8px 0;
+  font-size: 10px;
+  margin: 6px 0;
   break-inside: avoid;
 }
-.report-insights-body th,
-.report-insights-body td {
+.report-insights-content th,
+.report-insights-content td {
   border: 1px solid #e2e8f0;
-  padding: 5px 8px;
+  padding: 4px 7px;
   text-align: left;
 }
-.report-insights-body th {
+.report-insights-content th {
   background: #f1f5f9;
   font-weight: 600;
 }
-.report-insights-body blockquote {
+.report-insights-content blockquote {
   border-left: 3px solid #6366f1;
   padding-left: 10px;
   color: #475569;
-  margin: 8px 0;
+  margin: 6px 0;
+  font-style: italic;
 }
-.report-insights-body hr {
+.report-insights-content hr {
   border: 0;
   border-top: 1px solid #e2e8f0;
-  margin: 12px 0;
+  margin: 10px 0;
 }
 
 /* ================= Footer ================= */
