@@ -1,7 +1,6 @@
 import ReportKPI from "@/components/report/ReportKPI";
 import ReportChart from "@/components/report/ReportChart";
 import ReportProfile from "@/components/report/ReportProfile";
-import InsightsGrid from "@/components/report/InsightsGrid";
 import type { Plan, Profile } from "@/lib/api";
 import "./report.css";
 
@@ -9,7 +8,6 @@ type ReportData = {
   profile: Profile;
   plan: Plan;
   filename?: string;
-  insights?: string;
 };
 
 async function fetchReport(fileId: string): Promise<ReportData | null> {
@@ -39,7 +37,7 @@ export default async function ReportPage({
     );
   }
 
-  const { profile, plan, filename, insights } = data;
+  const { profile, plan, filename } = data;
   const now = new Date();
   const dateStr = now.toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -141,18 +139,6 @@ export default async function ReportPage({
           </div>
 
           {/* ============ 04 Insights (full width, 2-col text) ============ */}
-          {insights && (
-            <section className="report-section report-section-insights">
-              <div className="report-section-head">
-                <span className="report-section-num">04</span>
-                <div>
-                  <h2>Análise estratégica</h2>
-                  <p>Interpretação gerada por IA com base no perfil e no plano.</p>
-                </div>
-              </div>
-              <InsightsGrid markdown={insights} />
-            </section>
-          )}
         </div>
 
         <footer className="report-footer">

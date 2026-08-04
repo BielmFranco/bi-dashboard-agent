@@ -101,18 +101,20 @@ export default function ReportChart({ chart }: { chart: ChartSpec }) {
               />
             </LineChart>
           ) : chart.type === "pie" ? (
-            <PieChart>
+            <PieChart margin={{ top: 0, right: 4, left: 4, bottom: 0 }}>
               <Pie
                 data={data}
                 dataKey="value"
                 nameKey="label"
-                outerRadius={80}
-                innerRadius={40}
-                paddingAngle={2}
-                label={(entry: { label?: string }) => truncate(entry.label ?? "", 12)}
+                cx="50%"
+                cy="42%"
+                outerRadius="70%"
+                innerRadius="42%"
+                paddingAngle={1.5}
                 labelLine={false}
                 stroke="#ffffff"
                 strokeWidth={2}
+                isAnimationActive={false}
               >
                 {data.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -124,7 +126,13 @@ export default function ReportChart({ chart }: { chart: ChartSpec }) {
                   p.payload?.label ?? "",
                 ]}
               />
-              <Legend wrapperStyle={{ fontSize: 10 }} formatter={(v) => truncate(String(v), 18)} />
+              <Legend
+                wrapperStyle={{ fontSize: 9, paddingTop: 4, lineHeight: 1.4 }}
+                iconSize={8}
+                verticalAlign="bottom"
+                align="center"
+                formatter={(v) => truncate(String(v), 14)}
+              />
             </PieChart>
           ) : (
             <ScatterChart margin={{ top: 4, right: 4, left: 0, bottom: 4 }}>
