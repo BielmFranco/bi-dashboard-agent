@@ -174,8 +174,7 @@ def generate_insights_stream(profile: dict, plan: dict, sample_n: int = 20) -> I
         raise _translate_error(e)
 
 
-def chat(profile: dict, history: Iterable[dict], user_msg: str) -> str:
-    hist = list(history)
+def _chat_contents(profile: dict, history: Iterable[dict], user_msg: str) -> list[types.Content]:
     slim = {k: v for k, v in profile.items() if k != "sample"}
     ctx = "Contexto da base carregada (perfil resumido):\n" + json.dumps(
         slim, ensure_ascii=False, default=str
@@ -184,8 +183,59 @@ def chat(profile: dict, history: Iterable[dict], user_msg: str) -> str:
         _text_content("user", ctx),
         _text_content("assistant", "Base carregada. Pode perguntar."),
     ]
-    for h in hist:
+    for h in history:
         contents.append(_text_content(h["role"], h["content"]))
     contents.append(_text_content("user", user_msg))
+    return contents
+
+
+def chat(profile: dict, history: Iterable[dict], user_msg: str) -> str:
+    hist = list(history)
+    contents = _chat_contents(profile, hist, user_msg)
     log.info("Chat request: history=%d msg_chars=%d", len(hist), len(user_msg))
-    return _call(CHAT_SYSTEM, contents, max_tokens=1500)
+    return _call(CHAT_SYSTEM, contents, max_tokens=4000)
+
+
+def chat_stream(profile: dict, history: Iterable[dict], user_msg: str) -> Iterator[str]:
+    """SSE-friendly streaming variant of chat()."""
+    hist = list(history)
+    contents = _chat_contents(profile, hist, user_msg)
+    log.info("Chat stream request: history=%d msg_chars=%d", len(hist), len(user_msg))
+    try:
+        stream = client().models.generate_content_stream(
+            model=model_id(),
+            contents=contents,
+            config=_base_config(CHAT_SYSTEM, max_tokens=4000),
+        )
+        for chunk in stream:
+            text = getattr(chunk, "text", None)
+            if text:
+                yield text
+    except Exception as e:
+        log.exception("Chat stream error")
+        raise _translate_error(e)
+
+
+def suggest_questions(profile: dict) -> list[str]:
+    """Ask Gemini for 4 short questions in pt-BR based on the profile.
+    Returns a plain list of strings."""
+    slim = {k: v for k, v in profile.items() if k != "sample"}
+    profile_json = json.dumps(slim, ensure_ascii=False, default=str)[:15000]
+    prompt = (
+        "Com base no perfil de dados abaixo, gere EXATAMENTE 4 perguntas curtas "
+        "(máximo 6 palavras cada) que um analista faria sobre essa base. "
+        "Foque no que os dados permitem responder (colunas presentes, tipos). "
+        "Não repita perguntas óbvias. Responda SÓ as 4 perguntas, uma por linha, "
+        "sem numeração, sem aspas, sem marcadores.\n\n"
+        f"PERFIL:\n{profile_json}"
+    )
+    system = "Você sugere perguntas de análise de dados em pt-BR. Curtas, objetivas, específicas ao dataset."
+    try:
+        text = _call(system, [_text_content("user", prompt)], max_tokens=1000)
+    except RuntimeError:
+        raise
+    except Exception as e:
+        raise _translate_error(e)
+    lines = [ln.strip().lstrip("-•* ").rstrip("?.") for ln in text.split("\n") if ln.strip()]
+    lines = [ln + "?" for ln in lines if ln]
+    return lines[:4]

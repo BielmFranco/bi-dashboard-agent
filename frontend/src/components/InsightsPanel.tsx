@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, Copy, Sparkles } from "lucide-react";
+import { Check, Copy, Sparkles, StopCircle } from "lucide-react";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -13,9 +13,10 @@ type Props = {
   insights: string | null;
   loading: boolean;
   onRun: () => void;
+  onStop?: () => void;
 };
 
-export default function InsightsPanel({ insights, loading, onRun }: Props) {
+export default function InsightsPanel({ insights, loading, onRun, onStop }: Props) {
   const [copied, setCopied] = useState(false);
 
   async function copyAll() {
@@ -50,18 +51,25 @@ export default function InsightsPanel({ insights, loading, onRun }: Props) {
                 <span className="text-[11px]">{copied ? "Copiado" : "Copiar"}</span>
               </Button>
             )}
-            <Button
-              variant={insights ? "outline" : "default"}
-              size="sm"
-              onClick={onRun}
-              disabled={loading}
-              className="h-7"
-            >
-              <Sparkles className="h-3 w-3" />
-              <span className="text-[11px]">
-                {loading ? "Gerando" : insights ? "Regenerar" : "Gerar análise"}
-              </span>
-            </Button>
+            {loading && onStop ? (
+              <Button variant="destructive" size="sm" onClick={onStop} className="h-7">
+                <StopCircle className="h-3 w-3" />
+                <span className="text-[11px]">Parar</span>
+              </Button>
+            ) : (
+              <Button
+                variant={insights ? "outline" : "default"}
+                size="sm"
+                onClick={onRun}
+                disabled={loading}
+                className="h-7"
+              >
+                <Sparkles className="h-3 w-3" />
+                <span className="text-[11px]">
+                  {insights ? "Regenerar" : "Gerar análise"}
+                </span>
+              </Button>
+            )}
           </div>
         </CardHeader>
 

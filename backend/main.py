@@ -15,7 +15,8 @@ import cache as disk_cache
 from analyzer import load_dataframe, profile_dataframe
 from dashboard_planner import build_plan
 from llm import chat as llm_chat
-from llm import generate_insights, generate_insights_stream
+from llm import chat_stream as llm_chat_stream
+from llm import generate_insights, generate_insights_stream, suggest_questions
 from pdf_export import render_pdf, PdfExportError
 
 logging.basicConfig(
@@ -247,6 +248,49 @@ def chat_endpoint(file_id: str, body: ChatBody):
         log.exception("Erro inesperado em /chat")
         raise HTTPException(500, f"Erro inesperado: {e}")
     return {"reply": reply}
+
+
+@app.post("/chat_stream/{file_id}")
+def chat_stream_endpoint(file_id: str, body: ChatBody):
+    entry = _load_cached(file_id)
+    if "profile" not in entry:
+        raise HTTPException(400, "Rode /analyze antes.")
+
+    def gen():
+        try:
+            for chunk in llm_chat_stream(entry["profile"], body.history, body.message):
+                yield _sse("chunk", chunk)
+            yield _sse("done", "")
+        except RuntimeError as e:
+            yield _sse("error", str(e))
+        except Exception as e:
+            log.exception("Erro inesperado em /chat_stream")
+            yield _sse("error", f"Erro inesperado: {e}")
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+@app.get("/suggestions/{file_id}")
+def suggestions_endpoint(file_id: str):
+    entry = _load_cached(file_id)
+    if "profile" not in entry:
+        raise HTTPException(400, "Rode /analyze antes.")
+    try:
+        qs = suggest_questions(entry["profile"])
+    except RuntimeError as e:
+        raise HTTPException(500, str(e))
+    except Exception as e:
+        log.exception("Erro em /suggestions")
+        raise HTTPException(500, f"Erro inesperado: {e}")
+    return {"suggestions": qs}
 
 
 if __name__ == "__main__":

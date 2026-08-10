@@ -74,6 +74,23 @@ export async function deleteFile(fileId: string) {
   });
 }
 
+export type FileEntry = {
+  file_id: string;
+  filename: string | null;
+  uploaded_at: number | null;
+  rows: number | null;
+  cols: number | null;
+  has_profile: boolean;
+  has_plan: boolean;
+};
+
+export async function listFiles() {
+  return request<{ files: FileEntry[] }>("/files", {
+    method: "GET",
+    timeoutMs: 15000,
+  });
+}
+
 export async function exportPdf(
   fileId: string,
   opts?: { insights?: string; frontendUrl?: string },
@@ -177,6 +194,57 @@ export async function chat(fileId: string, history: ChatMsg[], message: string) 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ history, message }),
     timeoutMs: 120000,
+  });
+}
+
+export async function chatStream(
+  fileId: string,
+  history: ChatMsg[],
+  message: string,
+  onChunk: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const r = await fetch(`${BASE}/chat_stream/${fileId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ history, message }),
+    signal,
+  });
+  if (!r.ok || !r.body) {
+    const msg = await parseError(r);
+    throw new Error(`[${r.status}] ${msg}`);
+  }
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let errored: string | null = null;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx: number;
+    while ((idx = buf.indexOf("\n\n")) !== -1) {
+      const raw = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      let ev = "chunk";
+      const dataLines: string[] = [];
+      for (const line of raw.split("\n")) {
+        if (line.startsWith("event: ")) ev = line.slice(7).trim();
+        else if (line.startsWith("data: ")) dataLines.push(line.slice(6));
+      }
+      const data = dataLines.join("\n");
+      if (ev === "chunk") onChunk(data);
+      else if (ev === "error") errored = data;
+      else if (ev === "done") return;
+    }
+  }
+  if (errored) throw new Error(errored);
+}
+
+export async function fetchSuggestions(fileId: string) {
+  return request<{ suggestions: string[] }>(`/suggestions/${fileId}`, {
+    method: "GET",
+    timeoutMs: 30000,
   });
 }
 

@@ -1,14 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MessageSquare, Send, Sparkles } from "lucide-react";
+import { MessageSquare, Send, Sparkles, StopCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ChatMsg } from "@/lib/api";
-import { chat } from "@/lib/api";
+import { chatStream, fetchSuggestions } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 
-const SUGGESTIONS = [
+const FALLBACK_SUGGESTIONS = [
   "Sugira KPIs adicionais",
   "Existe sazonalidade?",
   "Quais outliers valem investigar?",
@@ -19,33 +19,79 @@ export default function Chat({ fileId }: { fileId: string }) {
   const [msgs, setMsgs] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>(FALLBACK_SUGGESTIONS);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [msgs]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { suggestions: s } = await fetchSuggestions(fileId);
+        if (!cancelled && s.length > 0) setSuggestions(s);
+      } catch {
+        /* keep fallback */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fileId]);
 
   async function send(text?: string) {
     const t = (text ?? input).trim();
     if (!t || busy) return;
     setBusy(true);
     const nextHistory = [...msgs, { role: "user" as const, content: t }];
-    setMsgs(nextHistory);
+    setMsgs([...nextHistory, { role: "assistant", content: "" }]);
     setInput("");
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     try {
-      const { reply } = await chat(fileId, msgs, t);
-      setMsgs([...nextHistory, { role: "assistant", content: reply }]);
-    } catch (e) {
-      setMsgs([
-        ...nextHistory,
-        {
-          role: "assistant",
-          content: `> **Erro:** ${e instanceof Error ? e.message : String(e)}`,
+      await chatStream(
+        fileId,
+        msgs,
+        t,
+        (delta) => {
+          setMsgs((prev) => {
+            const copy = [...prev];
+            const last = copy[copy.length - 1];
+            if (last && last.role === "assistant") {
+              copy[copy.length - 1] = { ...last, content: last.content + delta };
+            }
+            return copy;
+          });
         },
-      ]);
+        ctrl.signal,
+      );
+    } catch (e) {
+      const isAbort = e instanceof DOMException && e.name === "AbortError";
+      if (!isAbort) {
+        setMsgs((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (last && last.role === "assistant") {
+            const msg = e instanceof Error ? e.message : String(e);
+            copy[copy.length - 1] = {
+              ...last,
+              content: last.content + `\n\n> **Erro:** ${msg}`,
+            };
+          }
+          return copy;
+        });
+      }
     } finally {
       setBusy(false);
+      abortRef.current = null;
     }
+  }
+
+  function stop() {
+    abortRef.current?.abort();
   }
 
   return (
@@ -64,18 +110,15 @@ export default function Chat({ fileId }: { fileId: string }) {
           </div>
         </CardHeader>
 
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto px-5 py-4 space-y-3"
-        >
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           {msgs.length === 0 && (
             <div className="flex flex-col items-center text-center py-6">
               <Sparkles className="h-4 w-4 text-[var(--muted-foreground)] mb-2" />
               <p className="text-xs text-[var(--muted-foreground)] mb-3">
-                Faça perguntas específicas sobre os dados.
+                Perguntas sugeridas com base nos seus dados.
               </p>
               <div className="flex flex-wrap justify-center gap-1.5">
-                {SUGGESTIONS.map((s) => (
+                {suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
@@ -105,19 +148,15 @@ export default function Chat({ fileId }: { fileId: string }) {
                   }
                 `}
               >
-                <p className="whitespace-pre-wrap">{m.content}</p>
+                <p className="whitespace-pre-wrap">
+                  {m.content}
+                  {busy && i === msgs.length - 1 && m.role === "assistant" && (
+                    <span className="inline-block w-1.5 h-3 ml-0.5 bg-[var(--muted-foreground)] animate-pulse align-middle" />
+                  )}
+                </p>
               </div>
             </motion.div>
           ))}
-          {busy && (
-            <div className="flex justify-start">
-              <div className="bg-[var(--muted)] border border-[var(--border)] rounded-2xl rounded-bl-md px-3.5 py-2.5 flex gap-1">
-                <span className="w-1.5 h-1.5 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-1.5 h-1.5 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{ animationDelay: "120ms" }} />
-                <span className="w-1.5 h-1.5 bg-[var(--muted-foreground)] rounded-full animate-bounce" style={{ animationDelay: "240ms" }} />
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="border-t border-[var(--border)] p-3">
@@ -135,14 +174,26 @@ export default function Chat({ fileId }: { fileId: string }) {
               disabled={busy}
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--muted-foreground)] py-1.5"
             />
-            <Button
-              size="icon"
-              onClick={() => send()}
-              disabled={busy || !input.trim()}
-              className="h-7 w-7"
-            >
-              <Send className="h-3.5 w-3.5" />
-            </Button>
+            {busy ? (
+              <Button
+                size="icon"
+                variant="destructive"
+                onClick={stop}
+                className="h-7 w-7"
+                title="Parar geração"
+              >
+                <StopCircle className="h-3.5 w-3.5" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                onClick={() => send()}
+                disabled={!input.trim()}
+                className="h-7 w-7"
+              >
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
         </div>
       </Card>

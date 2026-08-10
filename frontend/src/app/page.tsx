@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Chat from "@/components/Chat";
 import ChartBlock from "@/components/ChartBlock";
+import CorrelationHeatmap from "@/components/CorrelationHeatmap";
 import InsightsPanel from "@/components/InsightsPanel";
 import KPICard from "@/components/KPICard";
 import Navbar from "@/components/Navbar";
@@ -37,6 +38,7 @@ export default function Home() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [restoring, setRestoring] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const insightsAbort = useState<{ ctrl: AbortController | null }>({ ctrl: null })[0];
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem(LS_KEY) : null;
@@ -90,19 +92,36 @@ export default function Home() {
     if (!fileId) return;
     setInsightsLoading(true);
     setInsightsText("");
+    const ctrl = new AbortController();
+    insightsAbort.ctrl = ctrl;
     try {
-      await insightsStream(fileId, (delta) => {
-        setInsightsText((prev) => (prev ?? "") + delta);
-      });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setInsightsText(
-        (prev) => (prev ? prev + "\n\n" : "") + `> **Erro:** ${msg}`,
+      await insightsStream(
+        fileId,
+        (delta) => {
+          setInsightsText((prev) => (prev ?? "") + delta);
+        },
+        ctrl.signal,
       );
-      toast.error("Falha ao gerar insights", { description: msg });
+    } catch (e) {
+      const isAbort = e instanceof DOMException && e.name === "AbortError";
+      if (isAbort) {
+        setInsightsText((prev) => (prev ? prev + "\n\n_[interrompido pelo usuário]_" : "_[interrompido pelo usuário]_"));
+        toast("Geração interrompida");
+      } else {
+        const msg = e instanceof Error ? e.message : String(e);
+        setInsightsText(
+          (prev) => (prev ? prev + "\n\n" : "") + `> **Erro:** ${msg}`,
+        );
+        toast.error("Falha ao gerar insights", { description: msg });
+      }
     } finally {
       setInsightsLoading(false);
+      insightsAbort.ctrl = null;
     }
+  }
+
+  function stopInsights() {
+    insightsAbort.ctrl?.abort();
   }
 
   async function handleExport() {
@@ -256,6 +275,12 @@ export default function Home() {
                   </div>
                 </section>
 
+                {profile.correlation && profile.correlation.columns.length >= 2 && (
+                  <section aria-label="Correlação">
+                    <CorrelationHeatmap profile={profile} />
+                  </section>
+                )}
+
                 <section
                   aria-label="Análise IA"
                   className="grid grid-cols-1 lg:grid-cols-2 gap-4"
@@ -264,6 +289,7 @@ export default function Home() {
                     insights={insightsText}
                     loading={insightsLoading}
                     onRun={runInsights}
+                    onStop={stopInsights}
                   />
                   <Chat fileId={fileId} />
                 </section>
