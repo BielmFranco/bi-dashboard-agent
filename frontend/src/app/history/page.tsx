@@ -115,15 +115,23 @@ export default function HistoryPage() {
         {files && files.length > 0 && (
           <div className="space-y-2">
             {files.map((f, i) => (
-              <motion.button
+              <motion.div
                 key={f.file_id}
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: i * 0.03 }}
+                role="button"
+                tabIndex={0}
                 onClick={() => open(f)}
-                className="group w-full text-left"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    open(f);
+                  }
+                }}
+                className="group w-full text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] rounded-xl"
               >
-                <Card className="p-4 hover:border-[var(--muted-foreground)]/40 transition-colors cursor-pointer">
+                <Card className="p-4 hover:border-[var(--muted-foreground)]/40 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--muted)] shrink-0">
                       <FileText className="h-5 w-5 text-[var(--muted-foreground)]" />
@@ -150,10 +158,12 @@ export default function HistoryPage() {
                       </div>
                     </div>
                     <button
+                      type="button"
                       onClick={(e) => remove(f, e)}
                       disabled={deleting === f.file_id}
                       className="p-2 rounded-md text-[var(--muted-foreground)] hover:text-[var(--destructive)] hover:bg-[var(--muted)] transition-colors disabled:opacity-50"
                       title="Remover"
+                      aria-label={`Remover ${f.filename ?? f.file_id}`}
                     >
                       {deleting === f.file_id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -164,7 +174,7 @@ export default function HistoryPage() {
                     <ArrowRight className="h-4 w-4 text-[var(--muted-foreground)] group-hover:text-[var(--foreground)] transition-colors" />
                   </div>
                 </Card>
-              </motion.button>
+              </motion.div>
             ))}
           </div>
         )}
