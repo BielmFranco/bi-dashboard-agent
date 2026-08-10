@@ -34,12 +34,17 @@ MAX_MB = 50
 
 app = FastAPI(title="BI Dashboard Agent")
 
+# CORS: default allows local dev. Add prod origin via FRONTEND_URL env var.
+_default_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+_extra = os.environ.get("FRONTEND_URL")
+_allowed = _default_origins + ([_extra.rstrip("/")] if _extra else [])
+# Optional wildcard for Vercel preview deploys: FRONTEND_URL_REGEX
+_allow_regex = os.environ.get("FRONTEND_URL_REGEX") or None
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=_allowed,
+    allow_origin_regex=_allow_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
