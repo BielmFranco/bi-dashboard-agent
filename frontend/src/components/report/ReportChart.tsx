@@ -1,6 +1,7 @@
 "use client";
 
-import type { ChartSpec } from "@/lib/api";
+import type { BoxplotStats, ChartSpec } from "@/lib/api";
+import Boxplot from "@/components/Boxplot";
 import { fmtCompactBR, fmtNumberBR, truncate } from "@/lib/format";
 import {
   Bar,
@@ -43,7 +44,19 @@ const compactFormatter = (v: number | string) =>
   fmtCompactBR(typeof v === "number" ? v : Number(v));
 
 export default function ReportChart({ chart }: { chart: ChartSpec }) {
-  const data = chart.data.map((d) => ({ ...d, label: fmtLabel(d.label) }));
+  if (chart.type === "boxplot") {
+    const stats = (chart.data[0] as BoxplotStats) || undefined;
+    return (
+      <div className="report-chart">
+        <h3 className="report-chart-title">{chart.title}</h3>
+        <p className="report-chart-desc">{chart.rationale}</p>
+        <div className="report-chart-body">
+          {stats && <Boxplot stats={stats} color="#4f46e5" outlierColor="#dc2626" />}
+        </div>
+      </div>
+    );
+  }
+  const data = (chart.data as { label?: string; value?: number; x?: number; y?: number }[]).map((d) => ({ ...d, label: fmtLabel(d.label) }));
   const axis = "#64748b";
   const grid = "#e2e8f0";
   const primary = "#4f46e5";

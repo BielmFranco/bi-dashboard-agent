@@ -60,6 +60,47 @@ export async function analyze(fileId: string) {
   });
 }
 
+export type FilterSpec =
+  | { op: "in"; values: (string | number)[] }
+  | { op: "range"; min?: number | string | null; max?: number | string | null }
+  | { op: "eq"; value: string | number };
+
+export type FilterMap = Record<string, FilterSpec>;
+
+export async function analyzeFiltered(fileId: string, filters: FilterMap) {
+  return request<{ profile: Profile; plan: Plan }>(
+    `/analyze/${fileId}/filtered`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filters }),
+      timeoutMs: 60000,
+    },
+  );
+}
+
+export type DrillResult = {
+  column: string;
+  value: string | number | null;
+  total: number;
+  columns: string[];
+  rows: Record<string, unknown>[];
+};
+
+export async function drillDown(
+  fileId: string,
+  column: string,
+  value: string | number,
+  filters: FilterMap = {},
+) {
+  return request<DrillResult>(`/drill/${fileId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ column, value, op: "eq", filters, limit: 200 }),
+    timeoutMs: 30000,
+  });
+}
+
 export async function getAnalysis(fileId: string) {
   return request<{ profile: Profile; plan: Plan; filename?: string }>(
     `/analyze/${fileId}`,
@@ -279,16 +320,33 @@ export type Profile = {
   correlation: { columns: string[]; matrix: (number | null)[][] } | null;
   sample: Record<string, unknown>[];
   sample_size: number;
+  active_filters?: string[];
+};
+
+export type BoxplotStats = {
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  max: number;
+  abs_min: number;
+  abs_max: number;
+  outliers: number[];
+  outliers_count: number;
+  n: number;
+  mean: number;
 };
 
 export type ChartSpec = {
   id: string;
-  type: "bar" | "line" | "pie" | "scatter";
+  type: "bar" | "line" | "pie" | "scatter" | "boxplot";
   title: string;
   rationale: string;
   x_label?: string;
   y_label?: string;
-  data: { label?: string; value?: number; x?: number; y?: number }[];
+  data:
+    | { label?: string; value?: number; x?: number; y?: number }[]
+    | BoxplotStats[];
 };
 
 export type KPI = {

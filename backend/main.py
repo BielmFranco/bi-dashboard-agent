@@ -11,9 +11,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
+import pandas as pd
+
 import cache as disk_cache
 from analyzer import load_dataframe, profile_dataframe
 from dashboard_planner import build_plan
+from filters import apply_filters, summarize_active
 from llm import chat as llm_chat
 from llm import chat_stream as llm_chat_stream
 from llm import generate_insights, generate_insights_stream, suggest_questions
@@ -132,6 +135,36 @@ def analyze(file_id: str):
     return {"profile": profile, "plan": plan}
 
 
+class FilteredBody(BaseModel):
+    filters: dict = {}
+
+
+class DrillBody(BaseModel):
+    column: str
+    value: str | int | float | None = None
+    op: str = "eq"
+    filters: dict = {}
+    limit: int = 200
+
+
+@app.post("/analyze/{file_id}/filtered")
+def analyze_filtered(file_id: str, body: FilteredBody):
+    entry = _load_cached(file_id)
+    try:
+        df = load_dataframe(entry["path"])
+    except Exception as e:
+        raise HTTPException(400, f"Falha ao ler arquivo: {e}")
+    filtered = apply_filters(df, body.filters)
+    if filtered.empty:
+        raise HTTPException(400, "Filtros resultaram em 0 registros. Ajuste os critérios.")
+    profile = profile_dataframe(filtered, sample_n=20)
+    plan = build_plan(filtered, profile)
+    profile["active_filters"] = summarize_active(body.filters)
+    log.info("Filtered analyze: %s → %d rows (filters=%s)",
+             file_id, len(filtered), list((body.filters or {}).keys()))
+    return {"profile": profile, "plan": plan}
+
+
 @app.get("/analyze/{file_id}")
 def get_analysis(file_id: str):
     """Retrieve cached analysis without recomputing — used to restore session."""
@@ -184,6 +217,42 @@ def export_pdf(file_id: str, body: ExportBody | None = None):
             "Content-Disposition": f'attachment; filename="{safe_name}_relatorio.pdf"',
         },
     )
+
+
+@app.post("/drill/{file_id}")
+def drill(file_id: str, body: DrillBody):
+    entry = _load_cached(file_id)
+    try:
+        df = load_dataframe(entry["path"])
+    except Exception as e:
+        raise HTTPException(400, f"Falha ao ler arquivo: {e}")
+    df = apply_filters(df, body.filters)
+    col = body.column
+    if col not in df.columns:
+        raise HTTPException(400, f"Coluna '{col}' não existe")
+    if body.op == "eq":
+        try:
+            if pd.api.types.is_numeric_dtype(df[col]):
+                subset = df[df[col] == float(body.value)]
+            else:
+                subset = df[df[col].astype(str) == str(body.value)]
+        except Exception:
+            subset = df[df[col].astype(str) == str(body.value)]
+    else:
+        subset = df
+    subset = subset.head(body.limit)
+    # Return columns + rows in JSON-safe form
+    from analyzer import _safe
+    rows = []
+    for _, r in subset.iterrows():
+        rows.append({k: _safe(v) for k, v in r.items()})
+    return {
+        "column": col,
+        "value": body.value,
+        "total": int(len(rows)),
+        "columns": list(df.columns),
+        "rows": rows,
+    }
 
 
 @app.post("/insights/{file_id}")

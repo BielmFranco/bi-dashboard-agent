@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { ChartSpec } from "@/lib/api";
+import type { BoxplotStats, ChartSpec } from "@/lib/api";
+import Boxplot from "@/components/Boxplot";
 import { fmtCompactBR, fmtNumberBR, truncate } from "@/lib/format";
 import {
   Bar,
@@ -49,10 +50,39 @@ const numberFormatter = (v: number | string) =>
 const compactFormatter = (v: number | string) =>
   fmtCompactBR(typeof v === "number" ? v : Number(v));
 
-type Props = { chart: ChartSpec; index?: number };
+type Props = {
+  chart: ChartSpec;
+  index?: number;
+  onDrill?: (column: string, value: string | number) => void;
+};
 
-export default function ChartBlock({ chart, index = 0 }: Props) {
-  const data = chart.data.map((d) => ({ ...d, label: fmtLabel(d.label) }));
+export default function ChartBlock({ chart, index = 0, onDrill }: Props) {
+  if (chart.type === "boxplot") {
+    const stats = (chart.data[0] as BoxplotStats) || undefined;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: index * 0.05, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <Card className="overflow-hidden">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">{chart.title}</CardTitle>
+            <CardDescription>{chart.rationale}</CardDescription>
+          </CardHeader>
+          <div className="h-64 w-full px-4 pb-4">
+            {stats ? (
+              <Boxplot stats={stats} height={210} />
+            ) : (
+              <p className="text-xs text-[var(--muted-foreground)]">Sem dados</p>
+            )}
+          </div>
+        </Card>
+      </motion.div>
+    );
+  }
+
+  const data = (chart.data as { label?: string; value?: number; x?: number; y?: number }[]).map((d) => ({ ...d, label: fmtLabel(d.label) }));
 
   const axisColor = "var(--muted-foreground)";
   const gridColor = "var(--border)";
@@ -115,7 +145,18 @@ export default function ChartBlock({ chart, index = 0 }: Props) {
                   labelStyle={tooltipLabelStyle}
                   formatter={(v: number) => [numberFormatter(v), chart.y_label || "Valor"]}
                 />
-                <Bar dataKey="value" fill="var(--primary)" radius={[6, 6, 0, 0]} />
+                <Bar
+                  dataKey="value"
+                  fill="var(--primary)"
+                  radius={[6, 6, 0, 0]}
+                  cursor={onDrill && chart.x_label ? "pointer" : "default"}
+                  onClick={(d: unknown) => {
+                    if (!onDrill || !chart.x_label) return;
+                    const label = (d as { label?: string })?.label;
+                    if (label !== undefined && label !== null && label !== "")
+                      onDrill(chart.x_label, label);
+                  }}
+                />
               </BarChart>
             ) : chart.type === "line" ? (
               <LineChart data={data} margin={{ top: 6, right: 10, left: 0, bottom: 5 }}>
@@ -164,8 +205,19 @@ export default function ChartBlock({ chart, index = 0 }: Props) {
                   labelLine={false}
                   isAnimationActive={false}
                 >
-                  {data.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="var(--card)" strokeWidth={2} />
+                  {data.map((entry, i) => (
+                    <Cell
+                      key={i}
+                      fill={COLORS[i % COLORS.length]}
+                      stroke="var(--card)"
+                      strokeWidth={2}
+                      cursor={onDrill && chart.x_label ? "pointer" : "default"}
+                      onClick={() => {
+                        if (!onDrill || !chart.x_label) return;
+                        const label = (entry as { label?: string })?.label;
+                        if (label) onDrill(chart.x_label, label);
+                      }}
+                    />
                   ))}
                 </Pie>
                 <Tooltip

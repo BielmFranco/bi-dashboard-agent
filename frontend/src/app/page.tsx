@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import Chat from "@/components/Chat";
 import ChartBlock from "@/components/ChartBlock";
 import CorrelationHeatmap from "@/components/CorrelationHeatmap";
+import DrillDownModal from "@/components/DrillDownModal";
+import FilterBar from "@/components/FilterBar";
 import InsightsPanel from "@/components/InsightsPanel";
 import KPICard from "@/components/KPICard";
 import Navbar from "@/components/Navbar";
@@ -17,10 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   analyze,
+  analyzeFiltered,
   deleteFile,
   exportPdf,
   getAnalysis,
   insightsStream,
+  type FilterMap,
   type Plan,
   type Profile,
 } from "@/lib/api";
@@ -38,6 +42,11 @@ export default function Home() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [restoring, setRestoring] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [basePlan, setBasePlan] = useState<Plan | null>(null);
+  const [baseProfile, setBaseProfile] = useState<Profile | null>(null);
+  const [filters, setFilters] = useState<FilterMap>({});
+  const [filtering, setFiltering] = useState(false);
+  const [drill, setDrill] = useState<{ column: string; value: string | number } | null>(null);
   const insightsAbort = useState<{ ctrl: AbortController | null }>({ ctrl: null })[0];
 
   useEffect(() => {
@@ -53,6 +62,9 @@ export default function Home() {
         setFilename(res.filename ?? null);
         setProfile(res.profile);
         setPlan(res.plan);
+        setBaseProfile(res.profile);
+        setBasePlan(res.plan);
+        setFilters({});
       } catch {
         localStorage.removeItem(LS_KEY);
       } finally {
@@ -73,6 +85,9 @@ export default function Home() {
       const res = await analyze(id);
       setProfile(res.profile);
       setPlan(res.plan);
+      setBaseProfile(res.profile);
+      setBasePlan(res.plan);
+      setFilters({});
       localStorage.setItem(LS_KEY, id);
       toast.success("Análise concluída", {
         description: `${res.profile.rows.toLocaleString("pt-BR")} linhas · ${
@@ -150,6 +165,39 @@ export default function Home() {
       });
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function applyFilters(next: FilterMap) {
+    setFilters(next);
+    if (!fileId) return;
+    const empty = Object.keys(next).length === 0;
+    if (empty) {
+      if (baseProfile && basePlan) {
+        setProfile(baseProfile);
+        setPlan(basePlan);
+      }
+      return;
+    }
+    setFiltering(true);
+    try {
+      const res = await analyzeFiltered(fileId, next);
+      setProfile(res.profile);
+      setPlan(res.plan);
+    } catch (e) {
+      toast.error("Falha ao aplicar filtros", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setFiltering(false);
+    }
+  }
+
+  function clearFilters() {
+    setFilters({});
+    if (baseProfile && basePlan) {
+      setProfile(baseProfile);
+      setPlan(basePlan);
     }
   }
 
@@ -254,8 +302,16 @@ export default function Home() {
               </div>
             )}
 
-            {profile && plan && (
+            {profile && plan && baseProfile && (
               <>
+                <FilterBar
+                  profile={baseProfile}
+                  filters={filters}
+                  onChange={applyFilters}
+                  onClear={clearFilters}
+                  loading={filtering}
+                />
+
                 <section aria-label="KPIs">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {plan.kpis.map((k, i) => (
@@ -270,7 +326,12 @@ export default function Home() {
                   </div>
                   <div className="lg:col-span-2 grid grid-cols-1 xl:grid-cols-2 gap-4">
                     {plan.charts.map((c, i) => (
-                      <ChartBlock key={c.id} chart={c} index={i} />
+                      <ChartBlock
+                        key={c.id}
+                        chart={c}
+                        index={i}
+                        onDrill={(column, value) => setDrill({ column, value })}
+                      />
                     ))}
                   </div>
                 </section>
@@ -298,6 +359,17 @@ export default function Home() {
           </section>
         )}
       </main>
+
+      {fileId && (
+        <DrillDownModal
+          open={drill !== null}
+          onOpenChange={(o) => !o && setDrill(null)}
+          fileId={fileId}
+          column={drill?.column ?? null}
+          value={drill?.value ?? null}
+          filters={filters}
+        />
+      )}
 
       <footer className="border-t border-[var(--border)] py-4 mt-8">
         <div className="mx-auto max-w-7xl px-6 flex items-center justify-between text-[11px] text-[var(--muted-foreground)]">

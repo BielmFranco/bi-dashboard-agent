@@ -73,6 +73,33 @@ def _time_series(df: pd.DataFrame, date_col: str, metric: str, freq: str = "ME")
     ]
 
 
+def _boxplot_stats(df: pd.DataFrame, col: str) -> dict:
+    s = pd.to_numeric(df[col], errors="coerce").dropna()
+    if s.empty:
+        return {"empty": True}
+    q1 = float(s.quantile(0.25))
+    med = float(s.median())
+    q3 = float(s.quantile(0.75))
+    iqr = q3 - q1
+    lo_fence = q1 - 1.5 * iqr
+    hi_fence = q3 + 1.5 * iqr
+    outliers = s[(s < lo_fence) | (s > hi_fence)]
+    within = s[(s >= lo_fence) & (s <= hi_fence)]
+    return {
+        "min": float(within.min()) if not within.empty else float(s.min()),
+        "q1": q1,
+        "median": med,
+        "q3": q3,
+        "max": float(within.max()) if not within.empty else float(s.max()),
+        "abs_min": float(s.min()),
+        "abs_max": float(s.max()),
+        "outliers": [float(v) for v in outliers.head(50).tolist()],
+        "outliers_count": int(len(outliers)),
+        "n": int(len(s)),
+        "mean": float(s.mean()),
+    }
+
+
 def _fmt_bin(v: float) -> str:
     a = abs(v)
     if a >= 1_000_000_000:
@@ -148,15 +175,17 @@ def build_plan(df: pd.DataFrame, profile: dict) -> dict:
 
     if num_cols:
         nc = num_cols[0]["name"]
-        charts.append({
-            "id": f"hist_{nc}",
-            "type": "bar",
-            "title": f"Distribuição — {nc}",
-            "rationale": "Histograma revela forma da distribuição, assimetria e caudas.",
-            "x_label": "faixa",
-            "y_label": "frequência",
-            "data": _distribution(df, nc, bins=12),
-        })
+        stats = _boxplot_stats(df, nc)
+        if not stats.get("empty"):
+            charts.append({
+                "id": f"boxplot_{nc}",
+                "type": "boxplot",
+                "title": f"Distribuição — {nc}",
+                "rationale": "Boxplot mostra quartis, mediana e outliers.",
+                "x_label": nc,
+                "y_label": "",
+                "data": [stats],
+            })
 
     if len(num_cols) >= 2:
         a, b = num_cols[0]["name"], num_cols[1]["name"]
