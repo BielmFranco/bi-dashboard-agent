@@ -12,6 +12,9 @@ backend/.env
 # Test fixtures — not part of app
 test-data/
 
+# Tunneling binary — installed via winget or manual download
+cloudflared.exe
+
 # Node
 frontend/node_modules/
 frontend/.next/
