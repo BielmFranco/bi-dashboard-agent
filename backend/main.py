@@ -343,14 +343,41 @@ def drill(request: Request, file_id: str, body: DrillBody):
     }
 
 
+class InsightsBody(BaseModel):
+    filters: dict = {}
+
+
+def _plan_for_context(entry: dict, filters: dict | None):
+    """Return (profile, plan) tuple, recomputing both if filters active."""
+    base_profile = entry.get("profile") or {}
+    base_plan = entry.get("plan") or {}
+    if not filters:
+        return base_profile, base_plan
+    try:
+        df = load_dataframe(entry["path"])
+    except Exception as e:
+        log.warning("Falha ao recomputar plano filtrado: %s. Usando base.", e)
+        return base_profile, base_plan
+    filtered = apply_filters(df, filters)
+    if filtered.empty:
+        log.warning("Filtros zeraram o dataframe, usando plano base.")
+        return base_profile, base_plan
+    prof = profile_dataframe(filtered, sample_n=20)
+    prof["active_filters"] = summarize_active(filters)
+    plan = build_plan(filtered, prof)
+    return prof, plan
+
+
 @app.post("/insights/{file_id}")
 @limiter.limit("10/minute")
-def insights(request: Request, file_id: str):
+def insights(request: Request, file_id: str, body: InsightsBody | None = None):
     entry = _load_cached(file_id)
     if "profile" not in entry or "plan" not in entry:
         raise HTTPException(400, "Rode /analyze antes.")
+    filters = body.filters if body else {}
+    profile, plan = _plan_for_context(entry, filters)
     try:
-        text = generate_insights(entry["profile"], entry["plan"])
+        text = generate_insights(profile, plan)
     except RuntimeError as e:
         raise HTTPException(500, str(e))
     except Exception as e:
@@ -367,14 +394,16 @@ def _sse(event: str, data: str) -> str:
 
 @app.post("/insights_stream/{file_id}")
 @limiter.limit("10/minute")
-def insights_stream(request: Request, file_id: str):
+def insights_stream(request: Request, file_id: str, body: InsightsBody | None = None):
     entry = _load_cached(file_id)
     if "profile" not in entry or "plan" not in entry:
         raise HTTPException(400, "Rode /analyze antes.")
+    filters = body.filters if body else {}
+    profile, plan = _plan_for_context(entry, filters)
 
     def gen():
         try:
-            for chunk in generate_insights_stream(entry["profile"], entry["plan"]):
+            for chunk in generate_insights_stream(profile, plan):
                 yield _sse("chunk", chunk)
             yield _sse("done", "")
         except RuntimeError as e:
@@ -466,10 +495,6 @@ def chat_stream_endpoint(request: Request, file_id: str, body: ChatBody):
     )
 
 
-class SuggestionsBody(BaseModel):
-    filters: dict = {}
-
-
 @app.get("/suggestions/{file_id}")
 @limiter.limit("20/minute")
 def suggestions_endpoint(request: Request, file_id: str):
@@ -482,6 +507,28 @@ def suggestions_endpoint(request: Request, file_id: str):
         raise HTTPException(500, str(e))
     except Exception as e:
         log.exception("Erro em /suggestions")
+        raise HTTPException(500, f"Erro inesperado: {e}")
+    return {"suggestions": qs}
+
+
+class SuggestionsBody(BaseModel):
+    filters: dict = {}
+
+
+@app.post("/suggestions/{file_id}")
+@limiter.limit("20/minute")
+def suggestions_post(request: Request, file_id: str, body: SuggestionsBody):
+    """POST variant that accepts active filters — recomputes profile if any."""
+    entry = _load_cached(file_id)
+    if "profile" not in entry:
+        raise HTTPException(400, "Rode /analyze antes.")
+    profile = _profile_for_context(entry, body.filters)
+    try:
+        qs = suggest_questions(profile)
+    except RuntimeError as e:
+        raise HTTPException(500, str(e))
+    except Exception as e:
+        log.exception("Erro em /suggestions POST")
         raise HTTPException(500, f"Erro inesperado: {e}")
     return {"suggestions": qs}
 

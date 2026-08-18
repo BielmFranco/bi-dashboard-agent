@@ -116,6 +116,7 @@ export default function Home() {
           setInsightsText((prev) => (prev ?? "") + delta);
         },
         ctrl.signal,
+        filters,
       );
     } catch (e) {
       const isAbort = e instanceof DOMException && e.name === "AbortError";

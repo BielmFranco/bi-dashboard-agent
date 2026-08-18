@@ -171,9 +171,11 @@ export async function exportPdf(
   }
 }
 
-export async function insights(fileId: string) {
+export async function insights(fileId: string, filters: FilterMap = {}) {
   return request<{ insights: string }>(`/insights/${fileId}`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filters }),
     timeoutMs: 180000,
   });
 }
@@ -182,9 +184,12 @@ export async function insightsStream(
   fileId: string,
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
+  filters: FilterMap = {},
 ): Promise<void> {
   const r = await fetch(`${BASE}/insights_stream/${fileId}`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filters }),
     signal,
   });
   if (!r.ok || !r.body) {
@@ -288,9 +293,18 @@ export async function chatStream(
   if (errored) throw new Error(errored);
 }
 
-export async function fetchSuggestions(fileId: string) {
+export async function fetchSuggestions(fileId: string, filters: FilterMap = {}) {
+  const hasFilters = Object.keys(filters).length > 0;
+  if (!hasFilters) {
+    return request<{ suggestions: string[] }>(`/suggestions/${fileId}`, {
+      method: "GET",
+      timeoutMs: 30000,
+    });
+  }
   return request<{ suggestions: string[] }>(`/suggestions/${fileId}`, {
-    method: "GET",
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filters }),
     timeoutMs: 30000,
   });
 }

@@ -37,7 +37,7 @@ export default function Chat({
     let cancelled = false;
     (async () => {
       try {
-        const { suggestions: s } = await fetchSuggestions(fileId);
+        const { suggestions: s } = await fetchSuggestions(fileId, filters);
         if (!cancelled && s.length > 0) setSuggestions(s);
       } catch {
         /* keep fallback */
@@ -46,7 +46,7 @@ export default function Chat({
     return () => {
       cancelled = true;
     };
-  }, [fileId]);
+  }, [fileId, filters]);
 
   async function send(text?: string) {
     const t = (text ?? input).trim();
