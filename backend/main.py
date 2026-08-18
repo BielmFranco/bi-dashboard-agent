@@ -1,15 +1,19 @@
 """FastAPI backend: upload, analyze, dashboard plan, insights, chat."""
-from __future__ import annotations
-
+import json
 import logging
 import os
+import shutil
+import time
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 import pandas as pd
 
@@ -22,11 +26,49 @@ from llm import chat_stream as llm_chat_stream
 from llm import generate_insights, generate_insights_stream, suggest_questions
 from pdf_export import render_pdf, PdfExportError
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-)
+
+def _client_ip(request: Request) -> str:
+    """Real client IP behind Cloudflare Tunnel / proxy chain."""
+    cf = request.headers.get("cf-connecting-ip")
+    if cf:
+        return cf.strip()
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+limiter = Limiter(key_func=_client_ip)
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": record.getMessage(),
+        }
+        if record.exc_info:
+            payload["exc"] = self.formatException(record.exc_info)
+        for k in ("file_id", "endpoint", "ip", "duration_ms"):
+            v = getattr(record, k, None)
+            if v is not None:
+                payload[k] = v
+        return json.dumps(payload, ensure_ascii=False)
+
+
+_LOG_FMT = os.environ.get("LOG_FORMAT", "text").lower()
+_handler = logging.StreamHandler()
+if _LOG_FMT == "json":
+    _handler.setFormatter(JsonFormatter())
+else:
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+
+logging.basicConfig(level=logging.INFO, handlers=[_handler], force=True)
 log = logging.getLogger("bi.main")
+
+APP_VERSION = os.environ.get("APP_VERSION", "1.0.0")
+_START_TS = time.time()
 
 BASE_DIR = Path(__file__).parent
 UPLOAD_DIR = BASE_DIR / "uploads"
@@ -35,7 +77,19 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 ALLOWED_EXT = {".csv", ".xlsx", ".xls", ".xlsm", ".tsv"}
 MAX_MB = 50
 
-app = FastAPI(title="BI Dashboard Agent")
+app = FastAPI(title="BI Dashboard Agent", version=APP_VERSION)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+
+@app.exception_handler(Exception)
+async def _unhandled(request: Request, exc: Exception):
+    log.exception("Unhandled error at %s", request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Erro interno. Tente novamente ou contate o mantenedor."},
+    )
 
 # CORS: default allows local dev. Add prod origin via FRONTEND_URL env var.
 _default_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
@@ -58,6 +112,29 @@ app.add_middleware(
 # Restored from disk on startup, synced back on every mutation.
 _cache: dict[str, dict] = disk_cache.load_all()
 
+RETENTION_DAYS = int(os.environ.get("CACHE_RETENTION_DAYS", "7"))
+
+
+@app.on_event("startup")
+async def _startup_cleanup():
+    removed = disk_cache.cleanup_older_than(RETENTION_DAYS)
+    if removed:
+        # Reload in-memory cache after cleanup
+        _cache.clear()
+        _cache.update(disk_cache.load_all())
+
+    async def _periodic():
+        import asyncio
+        while True:
+            await asyncio.sleep(6 * 3600)  # every 6h
+            r = disk_cache.cleanup_older_than(RETENTION_DAYS)
+            if r:
+                _cache.clear()
+                _cache.update(disk_cache.load_all())
+
+    import asyncio
+    asyncio.create_task(_periodic())
+
 
 def _load_cached(file_id: str) -> dict:
     entry = _cache.get(file_id)
@@ -74,12 +151,18 @@ def _persist(file_id: str) -> None:
 
 @app.get("/health")
 def health():
+    du = shutil.disk_usage(str(BASE_DIR))
     return {
         "ok": True,
+        "version": APP_VERSION,
+        "uptime_s": int(time.time() - _START_TS),
         "has_api_key": bool(
             os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
         ),
+        "model": os.environ.get("MODEL_ID", "gemini-flash-latest"),
         "cached_files": len(_cache),
+        "retention_days": RETENTION_DAYS,
+        "disk_free_gb": round(du.free / 1024**3, 2),
     }
 
 
@@ -101,7 +184,8 @@ def delete_file(file_id: str):
 
 
 @app.post("/upload")
-async def upload(file: UploadFile = File(...)):
+@limiter.limit("20/minute")
+async def upload(request: Request, file: UploadFile = File(...)):
     ext = Path(file.filename or "").suffix.lower()
     if ext not in ALLOWED_EXT:
         raise HTTPException(400, f"Extensão não suportada: {ext}")
@@ -118,7 +202,8 @@ async def upload(file: UploadFile = File(...)):
 
 
 @app.post("/analyze/{file_id}")
-def analyze(file_id: str):
+@limiter.limit("30/minute")
+def analyze(request: Request, file_id: str):
     entry = _load_cached(file_id)
     try:
         df = load_dataframe(entry["path"])
@@ -148,7 +233,8 @@ class DrillBody(BaseModel):
 
 
 @app.post("/analyze/{file_id}/filtered")
-def analyze_filtered(file_id: str, body: FilteredBody):
+@limiter.limit("30/minute")
+def analyze_filtered(request: Request, file_id: str, body: FilteredBody):
     entry = _load_cached(file_id)
     try:
         df = load_dataframe(entry["path"])
@@ -194,7 +280,8 @@ class ExportBody(BaseModel):
 
 
 @app.post("/export/{file_id}")
-def export_pdf(file_id: str, body: ExportBody | None = None):
+@limiter.limit("5/minute")
+def export_pdf(request: Request, file_id: str, body: ExportBody | None = None):
     entry = _load_cached(file_id)
     if "profile" not in entry or "plan" not in entry:
         raise HTTPException(400, "Rode /analyze antes.")
@@ -220,7 +307,8 @@ def export_pdf(file_id: str, body: ExportBody | None = None):
 
 
 @app.post("/drill/{file_id}")
-def drill(file_id: str, body: DrillBody):
+@limiter.limit("30/minute")
+def drill(request: Request, file_id: str, body: DrillBody):
     entry = _load_cached(file_id)
     try:
         df = load_dataframe(entry["path"])
@@ -256,7 +344,8 @@ def drill(file_id: str, body: DrillBody):
 
 
 @app.post("/insights/{file_id}")
-def insights(file_id: str):
+@limiter.limit("10/minute")
+def insights(request: Request, file_id: str):
     entry = _load_cached(file_id)
     if "profile" not in entry or "plan" not in entry:
         raise HTTPException(400, "Rode /analyze antes.")
@@ -277,7 +366,8 @@ def _sse(event: str, data: str) -> str:
 
 
 @app.post("/insights_stream/{file_id}")
-def insights_stream(file_id: str):
+@limiter.limit("10/minute")
+def insights_stream(request: Request, file_id: str):
     entry = _load_cached(file_id)
     if "profile" not in entry or "plan" not in entry:
         raise HTTPException(400, "Rode /analyze antes.")
@@ -307,15 +397,37 @@ def insights_stream(file_id: str):
 class ChatBody(BaseModel):
     history: list[dict] = []
     message: str
+    filters: dict = {}
+
+
+def _profile_for_context(entry: dict, filters: dict | None) -> dict:
+    """Return filtered profile if filters active, else full base profile."""
+    base = entry.get("profile") or {}
+    if not filters:
+        return base
+    try:
+        df = load_dataframe(entry["path"])
+    except Exception as e:
+        log.warning("Falha ao recomputar perfil filtrado: %s. Usando perfil base.", e)
+        return base
+    filtered = apply_filters(df, filters)
+    if filtered.empty:
+        log.warning("Filtros zeraram o dataframe, usando perfil base.")
+        return base
+    prof = profile_dataframe(filtered, sample_n=20)
+    prof["active_filters"] = summarize_active(filters)
+    return prof
 
 
 @app.post("/chat/{file_id}")
-def chat_endpoint(file_id: str, body: ChatBody):
+@limiter.limit("10/minute")
+def chat_endpoint(request: Request, file_id: str, body: ChatBody):
     entry = _load_cached(file_id)
     if "profile" not in entry:
         raise HTTPException(400, "Rode /analyze antes.")
+    profile = _profile_for_context(entry, body.filters)
     try:
-        reply = llm_chat(entry["profile"], body.history, body.message)
+        reply = llm_chat(profile, body.history, body.message)
     except RuntimeError as e:
         raise HTTPException(500, str(e))
     except Exception as e:
@@ -325,14 +437,16 @@ def chat_endpoint(file_id: str, body: ChatBody):
 
 
 @app.post("/chat_stream/{file_id}")
-def chat_stream_endpoint(file_id: str, body: ChatBody):
+@limiter.limit("10/minute")
+def chat_stream_endpoint(request: Request, file_id: str, body: ChatBody):
     entry = _load_cached(file_id)
     if "profile" not in entry:
         raise HTTPException(400, "Rode /analyze antes.")
+    profile = _profile_for_context(entry, body.filters)
 
     def gen():
         try:
-            for chunk in llm_chat_stream(entry["profile"], body.history, body.message):
+            for chunk in llm_chat_stream(profile, body.history, body.message):
                 yield _sse("chunk", chunk)
             yield _sse("done", "")
         except RuntimeError as e:
@@ -352,8 +466,13 @@ def chat_stream_endpoint(file_id: str, body: ChatBody):
     )
 
 
+class SuggestionsBody(BaseModel):
+    filters: dict = {}
+
+
 @app.get("/suggestions/{file_id}")
-def suggestions_endpoint(file_id: str):
+@limiter.limit("20/minute")
+def suggestions_endpoint(request: Request, file_id: str):
     entry = _load_cached(file_id)
     if "profile" not in entry:
         raise HTTPException(400, "Rode /analyze antes.")

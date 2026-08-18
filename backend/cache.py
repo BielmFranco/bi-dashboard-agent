@@ -71,6 +71,25 @@ def delete(file_id: str, entry: dict[str, Any] | None = None) -> None:
                 log.warning("Falha ao remover raw %s: %s", raw, e)
 
 
+def cleanup_older_than(days: int = 7) -> int:
+    """Remove cache entries + raw files older than N days. Returns count removed."""
+    cutoff = time.time() - (days * 86400)
+    removed = 0
+    for f in list(CACHE_DIR.glob("*.json")):
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        ts = data.get("uploaded_at") or 0
+        if ts and ts < cutoff:
+            file_id = f.stem
+            delete(file_id, data)
+            removed += 1
+    if removed:
+        log.info("Cleanup: removidos %d arquivos com >%d dias", removed, days)
+    return removed
+
+
 def summary(file_id: str, entry: dict[str, Any]) -> dict[str, Any]:
     prof = entry.get("profile") or {}
     return {

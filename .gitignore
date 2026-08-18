@@ -8,6 +8,10 @@ backend/uploads/*
 backend/cache/*
 !backend/cache/.gitkeep
 backend/.env
+.env
+.env.*
+!.env.example
+!*.env.example
 
 # Test fixtures — not part of app
 test-data/
@@ -31,3 +35,14 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+graft/
+
+# docs build tools
+docs/node_modules/
+docs/~$*
+~$*.docx
+
+# Claude Code user-local settings (per-machine)
+.claude/settings.local.json
