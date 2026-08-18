@@ -229,11 +229,16 @@ export async function insightsStream(
   if (errored) throw new Error(errored);
 }
 
-export async function chat(fileId: string, history: ChatMsg[], message: string) {
+export async function chat(
+  fileId: string,
+  history: ChatMsg[],
+  message: string,
+  filters: FilterMap = {},
+) {
   return request<{ reply: string }>(`/chat/${fileId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ history, message }),
+    body: JSON.stringify({ history, message, filters }),
     timeoutMs: 120000,
   });
 }
@@ -244,11 +249,12 @@ export async function chatStream(
   message: string,
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
+  filters: FilterMap = {},
 ): Promise<void> {
   const r = await fetch(`${BASE}/chat_stream/${fileId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ history, message }),
+    body: JSON.stringify({ history, message, filters }),
     signal,
   });
   if (!r.ok || !r.body) {

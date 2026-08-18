@@ -352,7 +352,7 @@ export default function Home() {
                     onRun={runInsights}
                     onStop={stopInsights}
                   />
-                  <Chat fileId={fileId} />
+                  <Chat fileId={fileId} filters={filters} />
                 </section>
               </>
             )}

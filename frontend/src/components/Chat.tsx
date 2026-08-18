@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { MessageSquare, Send, Sparkles, StopCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { ChatMsg } from "@/lib/api";
+import type { ChatMsg, FilterMap } from "@/lib/api";
 import { chatStream, fetchSuggestions } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,13 @@ const FALLBACK_SUGGESTIONS = [
   "Como filtrar por período?",
 ];
 
-export default function Chat({ fileId }: { fileId: string }) {
+export default function Chat({
+  fileId,
+  filters = {},
+}: {
+  fileId: string;
+  filters?: FilterMap;
+}) {
   const [msgs, setMsgs] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -67,6 +73,7 @@ export default function Chat({ fileId }: { fileId: string }) {
           });
         },
         ctrl.signal,
+        filters,
       );
     } catch (e) {
       const isAbort = e instanceof DOMException && e.name === "AbortError";
