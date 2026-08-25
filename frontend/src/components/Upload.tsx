@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FileSpreadsheet, Sparkles, UploadCloud, Zap } from "lucide-react";
+import { Sparkles, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,7 @@ type Props = {
   disabled?: boolean;
 };
 
-const FEATURES = [
-  { icon: Zap, label: "Análise em segundos" },
-  { icon: FileSpreadsheet, label: "Excel, CSV, TSV" },
-  { icon: Sparkles, label: "Insights com IA" },
-];
+const REPO_URL = "https://github.com/BielmFranco/bi-dashboard-agent";
 
 export default function Upload({ onUploaded, disabled }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -44,11 +40,11 @@ export default function Upload({ onUploaded, disabled }: Props) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="mx-auto max-w-2xl text-center pt-4 pb-6"
+        className="mx-auto max-w-4xl text-center pt-4 pb-6"
       >
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs text-[var(--muted-foreground)]">
           <Sparkles className="h-3 w-3 text-[var(--primary)]" />
-          Powered by Gemini
+          Powered by Groq + Gemini
         </div>
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--foreground)]">
           Da planilha ao insight em segundos.
@@ -63,7 +59,7 @@ export default function Upload({ onUploaded, disabled }: Props) {
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        className="mx-auto max-w-2xl"
+        className="mx-auto max-w-4xl"
       >
         <div
           onDragOver={(e) => {
@@ -158,22 +154,26 @@ export default function Upload({ onUploaded, disabled }: Props) {
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2 }}
-        className="mx-auto max-w-2xl mt-8 grid grid-cols-3 gap-3"
+        className="mx-auto max-w-4xl mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-[var(--muted-foreground)]"
       >
-        {FEATURES.map((f) => (
-          <div
-            key={f.label}
-            className="flex flex-col items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card)]/50 p-3"
-          >
-            <f.icon className="h-4 w-4 text-[var(--primary)]" />
-            <p className="text-[11px] text-center text-[var(--muted-foreground)] font-medium">
-              {f.label}
-            </p>
-          </div>
-        ))}
+        <a
+          href={REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 hover:text-[var(--foreground)] transition-colors"
+        >
+          <svg viewBox="0 0 16 16" className="h-3 w-3 fill-current" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          Open Source · MIT
+        </a>
+        <span className="text-[var(--border)]">·</span>
+        <span>100% dos números vêm do Pandas</span>
+        <span className="text-[var(--border)]">·</span>
+        <span>Seus dados nunca deixam sua sessão</span>
       </motion.div>
     </div>
   );
