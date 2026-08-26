@@ -42,10 +42,8 @@ def _safe(v: Any) -> Any:
 
 
 def _clean_records(df: pd.DataFrame, n: int) -> list[dict]:
-    head = df.head(n).copy()
-    for c in head.columns:
-        head[c] = head[c].map(_safe)
-    return head.to_dict(orient="records")
+    records = df.head(n).to_dict(orient="records")
+    return [{k: _safe(v) for k, v in rec.items()} for rec in records]
 
 
 _ID_NAME_HINTS = ("id", "codigo", "código", "cod", "matricula", "matrícula", "cpf", "cnpj", "registro")
