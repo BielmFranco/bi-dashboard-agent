@@ -19,11 +19,12 @@ class PdfExportError(RuntimeError):
     pass
 
 
-def render_pdf(url: str, wait_ms: int = 2500) -> bytes:
+def render_pdf(url: str, wait_ms: int = 400) -> bytes:
     """Render URL to A4 PDF using headless Chromium.
 
-    `wait_ms` gives Recharts + framer-motion time to finish their entrance
-    animations before we snapshot the page.
+    Recharts animations are disabled on the report page, so `wait_ms` only
+    covers font/layout settling. Selector-based wait replaces networkidle to
+    avoid the 500 ms trailing check when the dev server keeps HMR sockets open.
     """
     log.info("Rendering PDF from %s", url)
     try:
@@ -35,10 +36,13 @@ def render_pdf(url: str, wait_ms: int = 2500) -> bytes:
             try:
                 context = browser.new_context(
                     viewport={"width": 1754, "height": 1240},
-                    device_scale_factor=2,
+                    device_scale_factor=1.5,
                 )
                 page = context.new_page()
-                page.goto(url, wait_until="networkidle", timeout=30000)
+                page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                page.wait_for_selector(".report-doc", timeout=15000)
+                # Deixa Recharts terminar o mount inicial + fontes carregarem
+                page.evaluate("() => document.fonts && document.fonts.ready")
                 page.wait_for_timeout(wait_ms)
                 pdf: Optional[bytes] = page.pdf(
                     format="A4",

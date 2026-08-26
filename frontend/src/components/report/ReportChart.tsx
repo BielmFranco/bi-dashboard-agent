@@ -90,7 +90,7 @@ export default function ReportChart({ chart }: { chart: ChartSpec }) {
                 tickFormatter={compactFormatter}
               />
               <Tooltip formatter={(v: number) => [numberFormatter(v), chart.y_label || "Valor"]} />
-              <Bar dataKey="value" fill={primary} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="value" fill={primary} radius={[4, 4, 0, 0]} isAnimationActive={false} />
             </BarChart>
           ) : chart.type === "line" ? (
             <LineChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 4 }}>
@@ -111,6 +111,7 @@ export default function ReportChart({ chart }: { chart: ChartSpec }) {
                 stroke={primary}
                 strokeWidth={2.5}
                 dot={{ r: 3, fill: primary }}
+                isAnimationActive={false}
               />
             </LineChart>
           ) : chart.type === "pie" ? (
@@ -153,7 +154,7 @@ export default function ReportChart({ chart }: { chart: ChartSpec }) {
               <XAxis dataKey="x" stroke={axis} fontSize={9.5} name={chart.x_label} tickLine={false} axisLine={false} tickFormatter={compactFormatter} />
               <YAxis dataKey="y" stroke={axis} fontSize={9.5} name={chart.y_label} tickLine={false} axisLine={false} tickFormatter={compactFormatter} />
               <Tooltip formatter={(v: number) => numberFormatter(v)} />
-              <Scatter data={data} fill={primary} fillOpacity={0.7} />
+              <Scatter data={data} fill={primary} fillOpacity={0.7} isAnimationActive={false} />
             </ScatterChart>
           )}
         </ResponsiveContainer>
