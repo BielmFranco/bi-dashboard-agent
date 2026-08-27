@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles, UploadCloud } from "lucide-react";
+import Image from "next/image";
+import { Brain, Download, FileSpreadsheet, BarChart3, Zap, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -43,15 +44,20 @@ export default function Upload({ onUploaded, disabled }: Props) {
         className="mx-auto max-w-4xl text-center pt-4 pb-6"
       >
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs text-[var(--muted-foreground)]">
-          <Sparkles className="h-3 w-3 text-[var(--primary)]" />
+          <Brain className="h-3 w-3 text-[var(--primary)]" />
           Powered by Groq + Gemini
         </div>
-        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--foreground)]">
-          Da planilha ao insight em segundos.
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-[var(--foreground)] leading-[1.15]">
+          Sua planilha vira dashboard.
+          <br />
+          <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
+            Sem código. Sem espera.
+          </span>
         </h1>
-        <p className="mt-3 text-sm sm:text-base text-[var(--muted-foreground)] max-w-md mx-auto">
-          Envie seu arquivo e receba dashboard automático com KPIs, gráficos e
-          análise estratégica.
+        <p className="mt-4 text-sm sm:text-base text-[var(--muted-foreground)] max-w-lg mx-auto leading-relaxed">
+          Faça upload de qualquer <strong className="text-[var(--foreground)]">.xlsx</strong> ou{" "}
+          <strong className="text-[var(--foreground)]">.csv</strong> e receba
+          KPIs, gráficos interativos e análise estratégica gerada por IA em segundos.
         </p>
       </motion.div>
 
@@ -154,9 +160,84 @@ export default function Upload({ onUploaded, disabled }: Props) {
       </motion.div>
 
       <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        className="mx-auto max-w-4xl mt-10"
+      >
+        <p className="text-center text-xs font-medium uppercase tracking-widest text-[var(--muted-foreground)] mb-8">
+          Como funciona
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {[
+            {
+              icon: FileSpreadsheet,
+              step: "01",
+              title: "Envie sua planilha",
+              desc: "Arraste qualquer .xlsx, .csv ou .tsv. Seus dados nunca saem do servidor.",
+              img: "/screenshots/step1_upload.png",
+            },
+            {
+              icon: Brain,
+              step: "02",
+              title: "IA analisa os dados",
+              desc: "Pandas calcula. Gemini interpreta. Zero alucinação nos números.",
+              img: "/screenshots/step2_analysis.png",
+            },
+            {
+              icon: BarChart3,
+              step: "03",
+              title: "Dashboard pronto",
+              desc: "KPIs, gráficos, correlações e insights estratégicos em segundos.",
+              img: "/screenshots/step3_dashboard.png",
+            },
+            {
+              icon: Download,
+              step: "04",
+              title: "Exporte em PDF",
+              desc: "Baixe o relatório completo em PDF com um clique.",
+              img: "/screenshots/step4_pdf.png",
+            },
+          ].map((item) => (
+            <div
+              key={item.step}
+              className="group relative rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-hidden transition-all hover:border-[var(--primary)]/50 hover:shadow-[0_0_24px_-4px_rgba(79,70,229,0.15)]"
+            >
+              <div className="relative h-40 overflow-hidden border-b border-[var(--border)]">
+                <Image
+                  src={item.img}
+                  alt={item.title}
+                  fill
+                  className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                  sizes="(max-width: 640px) 100vw, 33vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-transparent to-transparent" />
+              </div>
+              <div className="p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary)]/10 text-[var(--primary)]">
+                    <item.icon className="h-4 w-4" strokeWidth={2} />
+                  </div>
+                  <span className="text-[10px] font-mono font-semibold text-[var(--muted-foreground)]">
+                    {item.step}
+                  </span>
+                </div>
+                <h3 className="text-sm font-semibold text-[var(--foreground)] mb-1">
+                  {item.title}
+                </h3>
+                <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
+                  {item.desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
         className="mx-auto max-w-4xl mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-[var(--muted-foreground)]"
       >
         <a
@@ -171,9 +252,26 @@ export default function Upload({ onUploaded, disabled }: Props) {
           Open Source · MIT
         </a>
         <span className="text-[var(--border)]">·</span>
-        <span>100% dos números vêm do Pandas</span>
+        <a
+          href="https://portfolio-orpin-ten-16.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-[var(--foreground)] transition-colors"
+        >
+          Portfólio
+        </a>
         <span className="text-[var(--border)]">·</span>
-        <span>Seus dados nunca deixam sua sessão</span>
+        <a
+          href="https://www.linkedin.com/in/gabriel-moraes-franco-935453352/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 hover:text-[var(--foreground)] transition-colors"
+        >
+          <svg viewBox="0 0 16 16" className="h-3 w-3 fill-current" aria-hidden="true">
+            <path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016l.016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z"/>
+          </svg>
+          LinkedIn
+        </a>
       </motion.div>
     </div>
   );
