@@ -43,9 +43,16 @@ export default function ReportPage() {
   const triggerPdf = useCallback(async () => {
     if (!reportRef.current || pdfTriggered.current) return;
     pdfTriggered.current = true;
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 1500));
+    const el = reportRef.current;
+    el.querySelectorAll<HTMLElement>("*").forEach((child) => {
+      child.style.animation = "none";
+      child.style.opacity = "1";
+      child.style.transform = "none";
+    });
+    await new Promise((r) => setTimeout(r, 200));
     const safeName = (data?.filename ?? "relatorio").replace(/\.[^.]+$/, "");
-    await generateDashboardPdf(reportRef.current, `${safeName}_relatorio.pdf`);
+    await generateDashboardPdf(el, `${safeName}_relatorio.pdf`);
   }, [data?.filename]);
 
   useEffect(() => {
