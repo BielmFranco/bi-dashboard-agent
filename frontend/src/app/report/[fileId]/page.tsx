@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import ReportKPI from "@/components/report/ReportKPI";
 import ReportChart from "@/components/report/ReportChart";
@@ -14,17 +14,19 @@ type ReportData = {
   filename?: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const DEFAULT_API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export default function ReportPage() {
   const { fileId } = useParams<{ fileId: string }>();
+  const searchParams = useSearchParams();
+  const apiBase = searchParams.get("api") || DEFAULT_API;
   const [data, setData] = useState<ReportData | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!fileId) return;
-    fetch(`${API_BASE}/report_data/${fileId}`, { cache: "no-store" })
+    fetch(`${apiBase}/report_data/${fileId}`, { cache: "no-store" })
       .then((r) => {
         if (!r.ok) throw new Error("not found");
         return r.json();
@@ -32,7 +34,7 @@ export default function ReportPage() {
       .then((d) => setData(d as ReportData))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [fileId]);
+  }, [fileId, apiBase]);
 
   if (loading) {
     return (
