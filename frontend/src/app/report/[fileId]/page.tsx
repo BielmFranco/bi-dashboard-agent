@@ -1,12 +1,11 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReportKPI from "@/components/report/ReportKPI";
 import ReportChart from "@/components/report/ReportChart";
 import ReportProfile from "@/components/report/ReportProfile";
 import type { Plan, Profile } from "@/lib/api";
-import { generateDashboardPdf } from "@/lib/pdf-client";
 import "./report.css";
 
 type ReportData = {
@@ -25,8 +24,7 @@ export default function ReportPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
-  const reportRef = useRef<HTMLElement>(null);
-  const pdfTriggered = useRef(false);
+  const printTriggered = useRef(false);
 
   useEffect(() => {
     if (!fileId) return;
@@ -40,26 +38,12 @@ export default function ReportPage() {
       .finally(() => setLoading(false));
   }, [fileId, apiBase]);
 
-  const triggerPdf = useCallback(async () => {
-    if (!reportRef.current || pdfTriggered.current) return;
-    pdfTriggered.current = true;
-    await new Promise((r) => setTimeout(r, 1500));
-    const el = reportRef.current;
-    el.querySelectorAll<HTMLElement>("*").forEach((child) => {
-      child.style.animation = "none";
-      child.style.opacity = "1";
-      child.style.transform = "none";
-    });
-    await new Promise((r) => setTimeout(r, 200));
-    const safeName = (data?.filename ?? "relatorio").replace(/\.[^.]+$/, "");
-    await generateDashboardPdf(el, `${safeName}_relatorio.pdf`);
-  }, [data?.filename]);
-
   useEffect(() => {
-    if (autoPdf && data && !loading) {
-      triggerPdf();
+    if (autoPdf && data && !loading && !printTriggered.current) {
+      printTriggered.current = true;
+      setTimeout(() => window.print(), 1200);
     }
-  }, [autoPdf, data, loading, triggerPdf]);
+  }, [autoPdf, data, loading]);
 
   if (loading) {
     return (
@@ -93,7 +77,7 @@ export default function ReportPage() {
 
   return (
     <div className="report-page">
-      <article className="report-doc" ref={reportRef}>
+      <article className="report-doc">
         <header className="report-cover">
           <div className="report-cover-brand">
             <div className="report-brand-mark">BI</div>
