@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Download, FileText, Loader2, RotateCw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Chat from "@/components/Chat";
 import ChartBlock from "@/components/ChartBlock";
@@ -27,7 +27,6 @@ import {
   type Plan,
   type Profile,
 } from "@/lib/api";
-import { generateDashboardPdf } from "@/lib/pdf-client";
 
 const LS_KEY = "bi-agent:last-file-id";
 
@@ -48,7 +47,6 @@ export default function Home() {
   const [filtering, setFiltering] = useState(false);
   const [drill, setDrill] = useState<{ column: string; value: string | number } | null>(null);
   const insightsAbort = useState<{ ctrl: AbortController | null }>({ ctrl: null })[0];
-  const dashboardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem(LS_KEY) : null;
@@ -141,23 +139,12 @@ export default function Home() {
     insightsAbort.ctrl?.abort();
   }
 
-  async function handleExport() {
-    if (!fileId || exporting || !dashboardRef.current) return;
+  function handleExport() {
+    if (!fileId || exporting) return;
     setExporting(true);
-    const safeName = (filename ?? "relatorio").replace(/\.[^.]+$/, "");
-    const promise = generateDashboardPdf(
-      dashboardRef.current,
-      `${safeName}_relatorio.pdf`,
-    );
-    try {
-      await toast.promise(promise, {
-        loading: "Gerando PDF...",
-        success: "PDF baixado",
-        error: (e) => `Falha no PDF: ${e instanceof Error ? e.message : e}`,
-      });
-    } finally {
-      setExporting(false);
-    }
+    window.open(`/report/${fileId}?pdf=1`, "_blank", "noopener,noreferrer");
+    toast.success("Relatório aberto — PDF será baixado automaticamente");
+    setTimeout(() => setExporting(false), 2000);
   }
 
   async function applyFilters(next: FilterMap) {
@@ -304,7 +291,6 @@ export default function Home() {
                   loading={filtering}
                 />
 
-                <div ref={dashboardRef} className="space-y-6">
                 <section aria-label="KPIs">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {plan.kpis.map((k, i) => (
@@ -335,17 +321,16 @@ export default function Home() {
                   </section>
                 )}
 
-                <section aria-label="Análise IA">
+                <section
+                  aria-label="Análise IA"
+                  className="grid grid-cols-1 lg:grid-cols-2 gap-4"
+                >
                   <InsightsPanel
                     insights={insightsText}
                     loading={insightsLoading}
                     onRun={runInsights}
                     onStop={stopInsights}
                   />
-                </section>
-                </div>
-
-                <section aria-label="Chat" className="mt-6">
                   <Chat fileId={fileId} filters={filters} />
                 </section>
               </>

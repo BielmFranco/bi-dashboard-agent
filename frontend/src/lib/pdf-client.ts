@@ -4,6 +4,7 @@ import { jsPDF } from "jspdf";
 export async function generateDashboardPdf(
   element: HTMLElement,
   filename: string = "relatorio.pdf",
+  orientation: "p" | "l" = "l",
 ): Promise<void> {
   const canvas = await html2canvas(element, {
     scale: 2,
@@ -11,7 +12,7 @@ export async function generateDashboardPdf(
     logging: false,
   });
 
-  const pdf = new jsPDF("p", "mm", "a4");
+  const pdf = new jsPDF(orientation, "mm", "a4");
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
 

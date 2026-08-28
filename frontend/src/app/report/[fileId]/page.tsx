@@ -1,11 +1,12 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReportKPI from "@/components/report/ReportKPI";
 import ReportChart from "@/components/report/ReportChart";
 import ReportProfile from "@/components/report/ReportProfile";
 import type { Plan, Profile } from "@/lib/api";
+import { generateDashboardPdf } from "@/lib/pdf-client";
 import "./report.css";
 
 type ReportData = {
@@ -20,9 +21,12 @@ export default function ReportPage() {
   const { fileId } = useParams<{ fileId: string }>();
   const searchParams = useSearchParams();
   const apiBase = searchParams.get("api") || DEFAULT_API;
+  const autoPdf = searchParams.get("pdf") === "1";
   const [data, setData] = useState<ReportData | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const reportRef = useRef<HTMLElement>(null);
+  const pdfTriggered = useRef(false);
 
   useEffect(() => {
     if (!fileId) return;
@@ -35,6 +39,20 @@ export default function ReportPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [fileId, apiBase]);
+
+  const triggerPdf = useCallback(async () => {
+    if (!reportRef.current || pdfTriggered.current) return;
+    pdfTriggered.current = true;
+    await new Promise((r) => setTimeout(r, 800));
+    const safeName = (data?.filename ?? "relatorio").replace(/\.[^.]+$/, "");
+    await generateDashboardPdf(reportRef.current, `${safeName}_relatorio.pdf`);
+  }, [data?.filename]);
+
+  useEffect(() => {
+    if (autoPdf && data && !loading) {
+      triggerPdf();
+    }
+  }, [autoPdf, data, loading, triggerPdf]);
 
   if (loading) {
     return (
@@ -68,7 +86,7 @@ export default function ReportPage() {
 
   return (
     <div className="report-page">
-      <article className="report-doc">
+      <article className="report-doc" ref={reportRef}>
         <header className="report-cover">
           <div className="report-cover-brand">
             <div className="report-brand-mark">BI</div>
