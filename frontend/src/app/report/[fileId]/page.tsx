@@ -1,3 +1,7 @@
+"use client";
+
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import ReportKPI from "@/components/report/ReportKPI";
 import ReportChart from "@/components/report/ReportChart";
 import ReportProfile from "@/components/report/ReportProfile";
@@ -10,29 +14,40 @@ type ReportData = {
   filename?: string;
 };
 
-async function fetchReport(fileId: string): Promise<ReportData | null> {
-  const base = process.env.REPORT_API_URL || "http://127.0.0.1:8000";
-  try {
-    const r = await fetch(`${base}/report_data/${fileId}`, { cache: "no-store" });
-    if (!r.ok) return null;
-    return (await r.json()) as ReportData;
-  } catch {
-    return null;
-  }
-}
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
-export default async function ReportPage({
-  params,
-}: {
-  params: Promise<{ fileId: string }>;
-}) {
-  const { fileId } = await params;
-  const data = await fetchReport(fileId);
+export default function ReportPage() {
+  const { fileId } = useParams<{ fileId: string }>();
+  const [data, setData] = useState<ReportData | null>(null);
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  if (!data) {
+  useEffect(() => {
+    if (!fileId) return;
+    fetch(`${API_BASE}/report_data/${fileId}`, { cache: "no-store" })
+      .then((r) => {
+        if (!r.ok) throw new Error("not found");
+        return r.json();
+      })
+      .then((d) => setData(d as ReportData))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [fileId]);
+
+  if (loading) {
     return (
       <div className="report-empty">
-        <p>Análise não encontrada para <code>{fileId}</code>.</p>
+        <p>Carregando relatório…</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="report-empty">
+        <p>
+          Análise não encontrada para <code>{fileId}</code>.
+        </p>
       </div>
     );
   }
@@ -44,12 +59,14 @@ export default async function ReportPage({
     month: "long",
     year: "numeric",
   });
-  const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const timeStr = now.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   return (
     <div className="report-page">
       <article className="report-doc">
-        {/* ============ Compact header strip ============ */}
         <header className="report-cover">
           <div className="report-cover-brand">
             <div className="report-brand-mark">BI</div>
@@ -70,7 +87,6 @@ export default async function ReportPage({
           </div>
         </header>
 
-        {/* ============ Hero stats strip ============ */}
         <div className="report-hero-strip">
           <div className="report-hero-stat">
             <p className="report-hero-stat-label">Registros</p>
@@ -93,7 +109,6 @@ export default async function ReportPage({
         </div>
 
         <div className="report-body">
-          {/* ============ 01 KPIs (full width row) ============ */}
           <section className="report-section">
             <div className="report-section-head">
               <span className="report-section-num">01</span>
@@ -109,7 +124,6 @@ export default async function ReportPage({
             </div>
           </section>
 
-          {/* ============ 02 + 03: Profile beside Charts (split) ============ */}
           <div className="report-split">
             <section className="report-section">
               <div className="report-section-head">
@@ -137,13 +151,13 @@ export default async function ReportPage({
               </div>
             </section>
           </div>
-
-          {/* ============ 04 Insights (full width, 2-col text) ============ */}
         </div>
 
         <footer className="report-footer">
           <span>© BI Dashboard Agent</span>
-          <span>Gerado com Gemini · Dados 100% baseados no arquivo enviado</span>
+          <span>
+            Gerado com Gemini · Dados 100% baseados no arquivo enviado
+          </span>
         </footer>
       </article>
     </div>
