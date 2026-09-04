@@ -291,7 +291,7 @@ def export_pdf(request: Request, file_id: str, body: ExportBody | None = None):
     frontend = (body.frontend_url if body else None) or os.environ.get(
         "FRONTEND_URL", "http://localhost:3000"
     )
-    report_url = f"{frontend.rstrip('/')}/report/{file_id}?api=http://127.0.0.1:8000"
+    report_url = f"{frontend.rstrip('/')}/report/{file_id}"
     try:
         pdf_bytes = render_pdf(report_url)
     except PdfExportError as e:
