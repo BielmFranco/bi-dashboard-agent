@@ -135,6 +135,8 @@ Datas conferidas com `git log --date=short`.
 
 | Data | Commit | Mudança |
 |---|---|---|
+| 2026-09-04 | `c6b9098` | Correção de afirmações desatualizadas em `README.md`, `DEPLOY.md` e `HANDOFF_NOVO_PC.md` |
+| 2026-09-04 | `dac2c8b` | **Documentação forense** (`CLAUDE.md`, `PROGRESS.md`, `CHANGELOG.md`, `docs/00`–`15`) + skill `project-context` |
 | 2026-09-04 | `257f439` | Remoção de código morto da migração de PDF: `pdf-client.ts` apagado; `html2canvas-pro`, `jspdf` e `next-themes` desinstalados; `?api=` removido do backend |
 | 2026-08-28 | `f3732e7` | **PDF passou a usar `window.print()`** em vez de html2canvas |
 | 2026-08-28 | `405e6eb` | Desligar animações antes da captura |

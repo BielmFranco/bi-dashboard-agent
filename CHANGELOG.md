@@ -8,7 +8,9 @@ histórico por fase de desenvolvimento.
 
 ---
 
-## [Não lançado]
+## 2026-09-04 — Documentação e transferência de contexto
+
+Commits `dac2c8b` e `c6b9098`.
 
 ### Documentation
 - Documentação forense completa em `docs/00_CONTEXT.md` até `docs/15_CONTINUITY.md`
