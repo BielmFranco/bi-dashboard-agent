@@ -102,9 +102,15 @@ Sete tipos possíveis. A ordem da avaliação importa:
 | 4 | `id` | dtype numérico **e** `_looks_like_id` |
 | 5 | `numeric` | dtype numérico |
 | 6 | `id` | texto **e** `_looks_like_id` |
-| 7 | `categorical` | `nunique <= max(20, 5% das linhas não-nulas)` |
-| 8 | `datetime_like` | > 80% de uma amostra de 50 valores parseia como data |
+| 7 | `datetime_like` | > 80% de uma amostra de 50 valores parseia como data |
+| 8 | `categorical` | `nunique <= max(20, 5% das linhas não-nulas)` |
 | 9 | `text` | o resto |
+
+> **Ordem `datetime_like` antes de `categorical` (corrigido 2026-09-04).** Uma coluna de
+> data em texto costuma ter poucos valores distintos (12 meses, ou uma linha por dia num
+> período curto) e antes caía em `categorical`, sumindo do gráfico de série temporal do
+> planner. O limiar forte de 80% mantém categóricas reais (nomes, códigos, meses por
+> extenso) fora deste ramo. Ver [`12_TECHNICAL_DECISIONS.md#d16`](12_TECHNICAL_DECISIONS.md).
 
 ### Detecção de identificador
 
@@ -154,6 +160,7 @@ dateutil linha a linha. Corrigido no commit `0e9b6ae`.
 | `duplicates` | `df.duplicated().sum()` — linha inteira idêntica |
 | `empty_columns` | colunas com `isna().all()` |
 | `correlation` | Pearson entre colunas `numeric`, 3 casas decimais. `None` se houver menos de 2. |
+| `group_summaries` | Agregados por grupo: para cada categórica de baixa cardinalidade, `count` + `sum`/`mean` de cada numérica por grupo. Adicionado 2026-09-04. |
 | `sample` | primeiras 20 linhas, passadas por `_safe` |
 | `sample_size` | `min(20, len(df))` |
 

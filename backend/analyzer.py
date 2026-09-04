@@ -93,9 +93,12 @@ def _infer_semantic(series: pd.Series, name: str = "") -> str:
     # low nunique on tiny samples but is still an identifier by intent.
     if _looks_like_id(name, non_null):
         return "id"
-    nunique = non_null.nunique()
-    if nunique <= max(20, int(0.05 * len(non_null))):
-        return "categorical"
+    # Check datetime_like BEFORE categorical. A date column stored as text
+    # usually has few distinct values (e.g. 12 months, or one row per day over
+    # a short span) and would otherwise be trapped as "categorical", which
+    # removes it from the time-series chart in dashboard_planner. Requiring
+    # >80% of a 50-row sample to parse as a date keeps real categoricals
+    # (names, product codes, months-as-words) out of this branch.
     sample = non_null.astype(str).head(50)
     try:
         parsed = _try_parse_dates(sample)
@@ -103,6 +106,9 @@ def _infer_semantic(series: pd.Series, name: str = "") -> str:
             return "datetime_like"
     except Exception:
         pass
+    nunique = non_null.nunique()
+    if nunique <= max(20, int(0.05 * len(non_null))):
+        return "categorical"
     return "text"
 
 
@@ -150,6 +156,50 @@ def _column_profile(name: str, s: pd.Series) -> dict:
     return prof
 
 
+def _group_summaries(
+    df: pd.DataFrame,
+    columns: list[dict],
+    max_dims: int = 4,
+    max_groups: int = 15,
+    max_metrics: int = 4,
+) -> list[dict]:
+    """Per-group aggregates so the LLM can answer 'which X has the highest Y'.
+
+    The column profile only carries whole-column stats (sum/mean of the whole
+    column), so questions like 'qual produto tem maior média' had no numbers to
+    stand on and the model correctly refused. This computes, for each
+    low-cardinality categorical dimension, the count plus sum and mean of each
+    numeric metric per group. Kept compact (few dims, top groups, few metrics)
+    to not blow up the prompt.
+    """
+    cats = [
+        c["name"] for c in columns
+        if c["semantic"] in ("categorical", "boolean") and c.get("unique", 0) <= 20
+    ][:max_dims]
+    nums = [c["name"] for c in columns if c["semantic"] == "numeric"][:max_metrics]
+    if not cats or not nums:
+        return []
+    out: list[dict] = []
+    for cat in cats:
+        try:
+            grp = df.groupby(cat, dropna=True)
+            sizes = grp.size().sort_values(ascending=False).head(max_groups)
+            agg = grp[nums].agg(["sum", "mean"])
+            groups = []
+            for val in sizes.index:
+                rec: dict = {"value": str(_safe(val)), "count": int(sizes[val])}
+                for n in nums:
+                    rec[n] = {
+                        "sum": _safe(agg.loc[val, (n, "sum")]),
+                        "mean": _safe(agg.loc[val, (n, "mean")]),
+                    }
+                groups.append(rec)
+            out.append({"dimension": cat, "metrics": nums, "groups": groups})
+        except Exception:
+            continue
+    return out
+
+
 def profile_dataframe(df: pd.DataFrame, sample_n: int = 20) -> dict:
     columns = [_column_profile(c, df[c]) for c in df.columns]
 
@@ -172,6 +222,7 @@ def profile_dataframe(df: pd.DataFrame, sample_n: int = 20) -> dict:
         "duplicates": dup_count,
         "empty_columns": empty_cols,
         "correlation": corr,
+        "group_summaries": _group_summaries(df, columns),
         "sample": _clean_records(df, sample_n),
         "sample_size": min(sample_n, len(df)),
     }

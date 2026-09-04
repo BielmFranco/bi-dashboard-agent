@@ -1,6 +1,6 @@
 # 10 — Testes
 
-**Estado confirmado em 2026-09-04:** 17 testes, todos passando, exit code 0.
+**Estado confirmado em 2026-09-04:** 26 testes, todos passando, exit code 0.
 Cobertura: apenas backend. Frontend não tem suíte.
 
 ---
@@ -39,7 +39,7 @@ e não indica falha.
 
 | Camada | Framework | Estado |
 |---|---|---|
-| Backend | pytest ≥8.0.0 | 17 testes |
+| Backend | pytest ≥8.0.0 | 26 testes |
 | Backend — mocks | `unittest.mock` (stdlib) | Usado em todo o `test_llm_chain.py` |
 | Frontend | — | **Nenhum** |
 | E2E | — | **Nenhum** |
@@ -107,6 +107,24 @@ SAMPLE = pd.DataFrame({
 
 ---
 
+## `tests/test_analyzer_semantic.py` — 9 testes
+
+Adicionado 2026-09-04 junto com as correções de detecção de data e agregação por grupo.
+
+| Teste | Verifica |
+|---|---|
+| `test_string_dates_low_cardinality_are_datetime_like` | Data em texto com poucos valores distintos vira `datetime_like`, não `categorical` |
+| `test_string_dates_monthly_repeated_are_datetime_like` | 12 datas distintas em 5000 linhas → `datetime_like` |
+| `test_word_months_stay_categorical` | "janeiro"/"fevereiro" continua `categorical` |
+| `test_product_names_stay_categorical` | "A"/"B"/"C" continua `categorical` |
+| `test_datetime_dtype_still_datetime` | dtype `datetime64` continua `datetime` |
+| `test_date_column_produces_time_series_chart` | Ponta a ponta: coluna de data em texto gera gráfico `line` no plano |
+| `test_group_summaries_present` | `group_summaries` populado com dimensão categórica |
+| `test_group_summaries_mean_is_correct` | Média por grupo bate (A=123,33; B=93,33) |
+| `test_group_summaries_empty_without_categorical` | Sem categórica → `group_summaries == []` |
+
+---
+
 ## O que NÃO está coberto
 
 Lacunas confirmadas por inspeção. Nenhuma é bug — são áreas sem teste.
@@ -149,7 +167,7 @@ curl http://127.0.0.1:8000/health
 cd backend && pytest
 ```
 
-**Passa se:** 17 testes, exit code 0.
+**Passa se:** 26 testes, exit code 0.
 
 ### 3. Upload
 

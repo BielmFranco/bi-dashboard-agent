@@ -239,6 +239,18 @@ ignore-a nas métricas."
 > DIRETAMENTE. NUNCA responda 'não tenho dados suficientes' se o campo estiver presente.
 > NUNCA multiplique média × n para estimar soma — a `sum` já vem calculada."
 
+**Agregações por grupo** (adicionado 2026-09-04):
+
+> "Se o perfil contiver `group_summaries`, ele traz, para cada dimensão categórica, a lista
+> de grupos com `count` e, por métrica numérica, `sum` e `mean` já calculados. Use para
+> responder 'qual X tem maior/menor soma/média de Y', rankings e comparações. NÃO responda
+> que seria necessário agrupar — o agrupamento já está lá."
+
+Motivo: antes, o perfil só carregava estatística por coluna. Perguntas como "qual produto
+tem maior média" não tinham número de apoio e o modelo recusava corretamente (sem alucinar),
+mas era uma recusa frustrante. `group_summaries` (calculado por `analyzer._group_summaries`)
+fornece os agregados. Ver [`12_TECHNICAL_DECISIONS.md#d17`](12_TECHNICAL_DECISIONS.md).
+
 **Filtros ativos:**
 
 > "Se o perfil contiver `active_filters`, o usuário aplicou filtros no dashboard. Todos os

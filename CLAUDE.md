@@ -149,9 +149,10 @@ pré-treinado. Antes de escrever código de framework, consulte
 cd backend; .\.venv\Scripts\Activate.ps1; pytest
 ```
 
-17 testes, todos passando. Cobrem a cadeia de LLM (12) e filtros/perfil (5).
+26 testes, todos passando. Cobrem a cadeia de LLM (12), filtros/perfil (5) e
+detecção de data + agregação por grupo (9). CI roda `pytest` a cada push/PR.
 
-**Sem cobertura:** endpoints, `dashboard_planner.py`, `cache.py`, frontend inteiro.
+**Sem cobertura:** endpoints, maior parte de `dashboard_planner.py`, `cache.py`, frontend inteiro.
 
 Smoke test manual de 11 passos em [`docs/10_TESTING.md`](docs/10_TESTING.md#smoke-test).
 Use-o depois de qualquer mudança relevante — a suíte automatizada não protege muita coisa.

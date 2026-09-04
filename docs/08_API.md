@@ -400,9 +400,24 @@ Existe porque `GET` não aceita body. O `GET` foi mantido por compatibilidade.
   duplicates: number;
   empty_columns: string[];
   correlation: { columns: string[]; matrix: (number | null)[][] } | null;
+  group_summaries?: GroupSummary[];   // agregados por grupo (2026-09-04)
   sample: Record<string, unknown>[];
   sample_size: number;
   active_filters?: string[];    // só quando há filtros
+}
+```
+
+### GroupSummary
+
+```ts
+{
+  dimension: string;             // coluna categórica
+  metrics: string[];             // colunas numéricas agregadas
+  groups: {
+    value: string;               // valor do grupo
+    count: number;
+    [metric: string]: { sum: number | null; mean: number | null } | string | number;
+  }[];
 }
 ```
 

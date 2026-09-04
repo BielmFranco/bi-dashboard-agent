@@ -1,5 +1,8 @@
 # BI Dashboard Agent
 
+[![tests](https://github.com/BielmFranco/bi-dashboard-agent/actions/workflows/test.yml/badge.svg)](https://github.com/BielmFranco/bi-dashboard-agent/actions/workflows/test.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Agente de Business Intelligence que transforma planilhas em dashboards profissionais com
 KPIs, gráficos e insights gerados por IA.
 
@@ -31,7 +34,7 @@ bi-dashboard-agent/
 │   ├── filters.py            # Aplicação de filtros no DataFrame
 │   ├── cache.py              # Persistência em disco (JSON por file_id)
 │   ├── pdf_export.py         # Playwright → PDF (endpoint legado)
-│   └── tests/                # 17 testes pytest
+│   └── tests/                # 26 testes pytest
 └── frontend/
     └── src/
         ├── app/              # / · /history · /report/[fileId]
@@ -124,8 +127,9 @@ cd backend
 pytest
 ```
 
-17 testes cobrindo a cadeia de LLM (retry, fallback, detecção de erro transitório,
-normalização entre providers) e filtros com recomputação de perfil.
+26 testes cobrindo a cadeia de LLM (retry, fallback, detecção de erro transitório,
+normalização entre providers), filtros com recomputação de perfil, detecção de data e
+agregação por grupo. Rodam no CI a cada push (GitHub Actions).
 
 Smoke test manual em [`docs/10_TESTING.md`](docs/10_TESTING.md).
 

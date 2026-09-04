@@ -8,6 +8,26 @@ histórico por fase de desenvolvimento.
 
 ---
 
+## 2026-09-04 — Correções de análise + CI
+
+### Added
+- Agregados por grupo no perfil (`analyzer._group_summaries`): para cada dimensão categórica
+  de baixa cardinalidade, `count` + `sum`/`mean` de cada numérica por grupo. O chat e os
+  insights passam a responder "qual X tem maior média/soma de Y" sem alucinar
+- `.github/workflows/test.yml`: CI rodando `pytest` a cada push e PR em `main`
+- `backend/tests/test_analyzer_semantic.py`: 9 testes (detecção de data, série temporal,
+  agregação por grupo). Total: 26 testes
+
+### Fixed
+- Coluna de data em texto (CSV) era classificada como `categorical` e nunca gerava o gráfico
+  de série temporal. `_infer_semantic` agora testa `datetime_like` antes de `categorical`
+
+### Changed
+- `CHAT_SYSTEM` instrui o modelo a usar `group_summaries` para rankings e comparações
+- Tipo `Profile` em `api.ts` ganhou `group_summaries` (`GroupSummary`)
+
+---
+
 ## 2026-09-04 — Documentação e transferência de contexto
 
 Commits `dac2c8b` e `c6b9098`.

@@ -254,7 +254,7 @@ pytest
 .................                                                        [100%]
 ```
 
-17 testes, exit code 0. Um `DeprecationWarning` vindo de `google/genai/types.py` é
+26 testes, exit code 0. Um `DeprecationWarning` vindo de `google/genai/types.py` é
 esperado no Python 3.14 e não indica falha.
 
 Detalhes e smoke test manual em [`10_TESTING.md`](10_TESTING.md).

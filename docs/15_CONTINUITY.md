@@ -81,7 +81,7 @@ Valide: <http://localhost:3000> mostra a tela de upload.
 cd backend; .\.venv\Scripts\Activate.ps1; pytest
 ```
 
-Esperado: 17 testes, exit code 0.
+Esperado: 26 testes, exit code 0.
 
 ### 8. Execute o smoke test
 

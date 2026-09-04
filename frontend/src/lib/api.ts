@@ -331,6 +331,16 @@ export type ColumnProfile = {
   max_date?: string | null;
 };
 
+export type GroupSummary = {
+  dimension: string;
+  metrics: string[];
+  groups: {
+    value: string;
+    count: number;
+    [metric: string]: string | number | { sum: number | null; mean: number | null };
+  }[];
+};
+
 export type Profile = {
   rows: number;
   cols: number;
@@ -338,6 +348,7 @@ export type Profile = {
   duplicates: number;
   empty_columns: string[];
   correlation: { columns: string[]; matrix: (number | null)[][] } | null;
+  group_summaries?: GroupSummary[];
   sample: Record<string, unknown>[];
   sample_size: number;
   active_filters?: string[];

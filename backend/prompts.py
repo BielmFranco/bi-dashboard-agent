@@ -80,6 +80,16 @@ Use esses números DIRETAMENTE quando perguntarem soma/média/mínimo/máximo/de
 NUNCA responda "não tenho dados suficientes" se o campo estiver presente no perfil.
 NUNCA multiplique média × n para estimar soma — a `sum` já vem calculada.
 
+## AGREGAÇÕES POR GRUPO
+
+Se o perfil contiver `group_summaries`, ele traz, para cada dimensão categórica,
+a lista de grupos com `count` e, por métrica numérica, `sum` e `mean` já calculados.
+Use esses números para responder "qual X tem maior/menor soma/média de Y",
+"quanto cada X representa", rankings e comparações entre categorias.
+NÃO responda que seria necessário agrupar os dados — o agrupamento já está em
+`group_summaries`. Se a dimensão ou métrica pedida não estiver lá (ex.: cardinalidade
+alta demais), aí sim diga que aquele corte específico não está disponível no perfil.
+
 ## FILTROS ATIVOS
 
 Se o perfil contiver `active_filters`, o usuário aplicou filtros no dashboard.

@@ -22,6 +22,9 @@ bi-dashboard-agent/
 │       ├── graft/SKILL.md        Skill de consulta ao code-graph
 │       └── project-context/      Skill de continuidade (criada nesta operação)
 │           └── SKILL.md
+├── .github/
+│   └── workflows/
+│       └── test.yml              CI: pytest a cada push e PR (2026-09-04)
 ├── .gitignore
 ├── .ignore                       Impede ripgrep de pular os cards do graft
 ├── .mcp.json                     Servidor MCP graft
@@ -51,6 +54,7 @@ bi-dashboard-agent/
 │   ├── requirements.txt
 │   ├── tests/
 │   │   ├── __init__.py
+│   │   ├── test_analyzer_semantic.py
 │   │   ├── test_filters_profile.py
 │   │   └── test_llm_chain.py
 │   └── uploads/.gitkeep
@@ -241,9 +245,10 @@ bi-dashboard-agent/
 |---|---|---|
 | `backend/tests/test_llm_chain.py` | 12 | Detecção de erro transitório, cadeia Groq→Gemini, PT_BR enforce, parsing de stream |
 | `backend/tests/test_filters_profile.py` | 5 | Filtros `in` e `range`, recomputação de perfil, `summarize_active` |
+| `backend/tests/test_analyzer_semantic.py` | 9 | Detecção de data em texto, gráfico de série temporal, agregação por grupo |
 | Frontend | 0 | Não existe suíte |
 
-Total confirmado: **17 testes, todos passando** (`pytest -q`, exit code 0).
+Total confirmado: **26 testes, todos passando** (`pytest -q`, exit code 0).
 
 ## Arquivos gerados / não versionados
 

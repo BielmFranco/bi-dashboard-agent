@@ -1,7 +1,7 @@
 # PROJECT PROGRESS
 
 > Arquivo de estado. **Atualize sempre que o estado do projeto mudar.**
-> Última atualização: **2026-09-04** · Commit de referência: `257f439`
+> Última atualização: **2026-09-04** · Correções de análise + CI (bug de data, agregação por grupo, GitHub Actions)
 
 Legenda: ✅ concluído · 🟡 parcial · 🔴 problema · ⚪ não iniciado · ❓ desconhecido
 
@@ -22,9 +22,9 @@ Aplicação funcional de ponta a ponta. Branch `main` limpa, sincronizada com `o
 | Drill-down | ✅ | Modal com tabela e export CSV |
 | Frontend Next.js | ✅ | 3 rotas, deploy automático no Vercel |
 | Exportação de PDF | ✅ | `window.print()` — funciona, mas exige confirmação do usuário |
-| Testes backend | 🟡 | 17 testes verdes; cobrem só LLM e filtros |
+| Testes backend | 🟡 | 26 testes verdes; LLM, filtros, detecção de data e agregação por grupo. Endpoints e `dashboard_planner` ainda descobertos. |
 | Testes frontend | ⚪ | Nenhum |
-| CI | ⚪ | Nenhum GitHub Actions |
+| CI | ✅ | GitHub Actions roda `pytest` a cada push/PR |
 | Deploy do backend | 🟡 | Local + túnel Cloudflare. Railway preparado, não confirmado. |
 | Documentação | ✅ | `docs/00`–`docs/15` criados em 2026-09-04 |
 
@@ -157,7 +157,10 @@ e [`CHANGELOG.md`](CHANGELOG.md).
 
 | Verificação | Comando | Resultado |
 |---|---|---|
-| Testes backend | `pytest` em `backend/` | ✅ 17 passaram, exit code 0 |
+| Testes backend | `pytest` em `backend/` | ✅ 26 passaram, exit code 0 |
+| Bug data → série temporal | `/analyze` do smoke_vendas.csv | ✅ `data` = `datetime_like`, gráfico `line` presente |
+| Agregação por grupo | `/analyze` | ✅ `group_summaries` com categoria/regiao/produto |
+| Chat/insights ao vivo | `/chat_stream` neste desktop | ⚠️ bloqueado — keys Groq+Gemini do desktop retornam 401. Funciona no notebook (keys válidas). |
 | Versão do Python | `python --version` | ✅ 3.14.3 |
 | Versão do Node | `node --version` | ✅ v24.19.0 |
 | Estado do git | `git status` | ✅ Limpo, `main` = `origin/main` |
@@ -180,34 +183,30 @@ drill-down. Requerem backend com API key e interação manual — ver o SMOKE TE
 
 ## NEXT STEP
 
-Em ordem de prioridade. O item 1 é o de maior retorno.
+Concluído em 2026-09-04:
+- ✅ **CI com GitHub Actions** (`.github/workflows/test.yml`)
+- ✅ **Bug de data em texto** — `datetime_like` antes de `categorical`
+- ✅ **Agregação por grupo no chat** — `group_summaries` no perfil
 
-### 1. CI com GitHub Actions
-Workflow rodando `pytest` a cada push e PR. O projeto tem 17 testes verdes que hoje só
-rodam quando alguém lembra. Baixo custo, alto retorno.
+Em ordem de prioridade, o que resta:
 
-```yaml
-# .github/workflows/test.yml — esqueleto sugerido
-# python 3.12, pip install -r backend/requirements.txt, pytest
-```
-
-### 2. Testes de endpoint com `TestClient`
+### 1. Testes de endpoint com `TestClient`
 Cobrir `/upload → /analyze → /report_data` com um CSV pequeno em fixture. Hoje qualquer
 quebra de contrato entre backend e frontend só aparece em runtime.
 
-### 3. Corrigir o texto do toast de PDF
+### 2. Corrigir o texto do toast de PDF
 Trocar "PDF será baixado automaticamente" por algo como "Escolha *Salvar como PDF* no
 diálogo de impressão". Uma linha em `frontend/src/app/page.tsx:146`.
 
-### 4. Decidir sobre `POST /export` e `pdf_export.py`
+### 3. Decidir sobre `POST /export` e `pdf_export.py`
 Remover (e tirar `playwright` do `requirements.txt`, trocar a imagem base do Dockerfile) ou
 documentar como caminho alternativo. Manter código morto que sustenta uma imagem de 1 GB
 é caro.
 
-### 5. Named tunnel do Cloudflare
+### 4. Named tunnel do Cloudflare
 Elimina a causa raiz do problema operacional mais frequente do projeto.
 
-### 6. README com hero, badges e diagrama
+### 5. README com hero, badges e diagrama
 Pendência de alta prioridade herdada do `HANDOFF_NOVO_PC.md`, para o lançamento no LinkedIn.
 
 ---

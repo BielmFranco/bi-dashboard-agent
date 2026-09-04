@@ -138,9 +138,13 @@ Classifica cada coluna em um de sete tipos semânticos. **Ordem importa:**
 3. `boolean` — dtype é bool
 4. `numeric` ou `id` — dtype numérico; vira `id` se `_looks_like_id` der verdadeiro
 5. `id` — texto que casa com heurística de identificador
-6. `categorical` — `nunique <= max(20, 5% das linhas)`
-7. `datetime_like` — mais de 80% da amostra de 50 valores parseia como data
+6. `datetime_like` — mais de 80% da amostra de 50 valores parseia como data
+7. `categorical` — `nunique <= max(20, 5% das linhas)`
 8. `text` — o resto
+
+> `datetime_like` é testado **antes** de `categorical` (corrigido 2026-09-04): datas em
+> texto têm poucos valores distintos e antes eram capturadas como categóricas, sumindo da
+> série temporal. Ver [`12_TECHNICAL_DECISIONS.md#d16`](12_TECHNICAL_DECISIONS.md).
 
 ### `_looks_like_id(name, series) -> bool`
 
@@ -165,6 +169,7 @@ Saída:
   "duplicates": int,          # df.duplicated().sum()
   "empty_columns": [str],     # colunas 100% nulas
   "correlation": {"columns": [...], "matrix": [[...]]} | None,
+  "group_summaries": [ <agregados por grupo> ],  # ver abaixo
   "sample": [ {col: valor} ],  # primeiras sample_n linhas, JSON-safe
   "sample_size": int,
 }
@@ -176,6 +181,30 @@ Além disso, dependendo do `semantic`:
 - `numeric` → `min`, `max`, `mean`, `median`, `std`, `q25`, `q75`, `sum`, `outliers_count`
 - `categorical` / `text` / `boolean` → `top_values` (top 10, com contagem)
 - `datetime` / `datetime_like` → `min_date`, `max_date`
+
+### `_group_summaries(df, columns) -> list[dict]`
+
+Adicionado em 2026-09-04. Para cada dimensão categórica de baixa cardinalidade
+(`unique <= 20`, até 4 dimensões), calcula `count` e, por métrica numérica (até 4),
+`sum` e `mean` de cada grupo (top 15 grupos por tamanho). Vai em `profile["group_summaries"]`.
+
+```python
+[
+  {"dimension": "produto", "metrics": ["quantidade", "valor"],
+   "groups": [
+     {"value": "A", "count": 3,
+      "quantidade": {"sum": 370, "mean": 123.33},
+      "valor": {"sum": 60, "mean": 20}},
+     ...
+   ]}
+]
+```
+
+Motivo: o perfil por coluna só tem estatística da coluna inteira; perguntas como
+"qual produto tem maior média" não tinham número em que se apoiar e o chat recusava
+(corretamente, sem alucinar). Agora tem. Ver
+[`12_TECHNICAL_DECISIONS.md#d17`](12_TECHNICAL_DECISIONS.md) e
+[`07_LLM.md`](07_LLM.md). Coberto por `tests/test_analyzer_semantic.py`.
 
 `correlation` só existe com 2+ colunas numéricas; é Pearson arredondado a 3 casas.
 

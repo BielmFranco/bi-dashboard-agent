@@ -538,6 +538,107 @@ mas não a dependência da máquina local.
 
 ---
 
+## D16 — Detecção de data em texto antes de categórica
+
+### Contexto
+Encontrado ao rodar o smoke test com um CSV real: a coluna `data` (texto) foi classificada
+como `categorical` e o dashboard saiu com "Top data por quantidade" (barras de datas soltas)
+em vez de série temporal.
+
+### Problema
+Em `_infer_semantic`, o teste de `categorical` (`nunique <= max(20, 5%)`) rodava antes do
+teste de `datetime_like`. Uma coluna de data em texto quase sempre tem poucos valores
+distintos, então caía em `categorical` e nunca chegava ao teste de data. Verificado: 20/5000
+linhas com 10/12/84 datas distintas — todas viravam `categorical`; só dtype `datetime64`
+escapava.
+
+### Decisão adotada
+Mover o teste `datetime_like` para **antes** do `categorical`, mantendo o limiar de 80% de
+uma amostra de 50 valores.
+
+### Justificativa
+O limiar de 80% é forte o bastante para não capturar categóricas reais (nomes, códigos,
+meses por extenso não parseiam como data). Datas, sim.
+
+### Impacto
+- CSV com coluna de data volta a gerar o gráfico `line` de evolução mensal
+- Excel já escapava, porque o pandas costuma entregar `datetime64`
+- Risco pequeno: anos como texto ("2020".."2023") passam a virar `datetime_like` — aceitável
+
+### Evidência
+`backend/analyzer.py` (`_infer_semantic`, ordem dos ramos). Coberto por
+`tests/test_analyzer_semantic.py` (6 testes de detecção + o de ponta a ponta do gráfico).
+
+### Commit relacionado
+2026-09-04.
+
+---
+
+## D17 — Agregados por grupo no perfil
+
+### Contexto
+No chat, "Qual produto tem maior média?" era respondido com "seria necessário agrupar os
+registros por produto" — recusa correta, mas frustrante.
+
+### Problema
+O perfil enviado ao LLM só tinha estatística **por coluna** (soma/média da coluna inteira),
+não **por grupo**. Sem o número, o modelo se recusava a inventar — a guarda anti-alucinação
+funcionando, mas entregando uma resposta inútil.
+
+### Alternativas
+1. Deixar o LLM calcular a partir da amostra (arriscaria alucinação, viola D1)
+2. Adicionar agregados por grupo já calculados ao perfil
+
+### Decisão adotada
+Alternativa 2. `analyzer._group_summaries` calcula, para cada dimensão categórica de baixa
+cardinalidade (até 4 dims, `unique <= 20`), o `count` e o `sum`/`mean` de cada numérica
+(até 4 métricas, top 15 grupos). Vai em `profile["group_summaries"]`. O `CHAT_SYSTEM`
+instrui o modelo a usar.
+
+### Justificativa
+Mantém a regra D1 (número calculado por Pandas, não pelo LLM) e resolve a classe inteira de
+perguntas de ranking/comparação por categoria. Compacto para não estourar o prompt.
+
+### Impacto
+- Chat e insights passam a responder "qual X tem maior média/soma de Y"
+- Prompt cresce um pouco; limitado por dims/grupos/métricas
+- `q25`/`q75` continuam divergentes no `api.ts` (não relacionado); `group_summaries` foi
+  adicionado ao tipo `Profile`
+
+### Evidência
+`backend/analyzer.py` (`_group_summaries`), `backend/prompts.py` (bloco no `CHAT_SYSTEM`),
+`frontend/src/lib/api.ts` (tipo `GroupSummary`). Coberto por `tests/test_analyzer_semantic.py`.
+
+### Commit relacionado
+2026-09-04.
+
+---
+
+## D18 — CI com GitHub Actions
+
+### Contexto
+26 testes verdes que só rodavam quando alguém lembrava. Deploy do Vercel acontecia sem
+gate de teste.
+
+### Decisão adotada
+Workflow `.github/workflows/test.yml` rodando `pytest` a cada push e PR em `main`, com
+Python 3.12 e chaves de LLM dummy (nenhum teste faz chamada real).
+
+### Justificativa
+Baixo custo, protege contra regressão. Era o `NEXT STEP` documentado.
+
+### Impacto
+- Toda alteração passa a ser testada automaticamente
+- Não bloqueia o deploy do Vercel (são pipelines separados) — é sinal, não gate rígido
+
+### Evidência
+`.github/workflows/test.yml`.
+
+### Commit relacionado
+2026-09-04.
+
+---
+
 ## Decisões pendentes de registro
 
 Itens em que a intenção é conhecida mas a implementação não começou. Detalhe em
@@ -545,5 +646,4 @@ Itens em que a intenção é conhecida mas a implementação não começou. Deta
 
 - Circuit breaker para a cadeia de LLM
 - Named tunnel do Cloudflare
-- CI com GitHub Actions
 - Remoção ou reativação de `POST /export` e `pdf_export.py`

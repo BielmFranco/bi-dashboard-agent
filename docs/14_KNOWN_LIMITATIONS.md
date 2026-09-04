@@ -43,6 +43,16 @@ gráficos como se fosse métrica. Trade-off deliberado do commit `256b03d` — v
 
 ## Análise e dashboard
 
+### ~~Data em texto não virava série temporal~~ — RESOLVIDO 2026-09-04
+Coluna de data em CSV era classificada como `categorical` (o teste rodava antes do de
+`datetime_like`), então nunca gerava o gráfico `line`. Corrigido invertendo a ordem em
+`_infer_semantic`. Ver [`12_TECHNICAL_DECISIONS.md#d16`](12_TECHNICAL_DECISIONS.md).
+
+### ~~Chat não respondia agregação por grupo~~ — RESOLVIDO 2026-09-04
+"Qual produto tem maior média?" recebia recusa porque o perfil só tinha estatística por
+coluna. `analyzer._group_summaries` passou a incluir agregados por grupo no perfil. Ver
+[`12_TECHNICAL_DECISIONS.md#d17`](12_TECHNICAL_DECISIONS.md).
+
 ### Limitação confirmada — planner escolhe sempre a primeira coluna
 `build_plan` pega a **primeira** coluna numérica, categórica e de data na ordem em que
 aparecem na planilha. Não há score de relevância, variância ou cardinalidade. Uma planilha
@@ -203,9 +213,9 @@ apaga tudo. `DEPLOY.md` documenta, mas não é obrigatório na configuração.
 O cache em memória (`main.py:113`) não tem lock nem sincronização. Rodar com
 `--workers > 1` produziria estado inconsistente entre processos.
 
-### Limitação confirmada — sem CI
-Nenhum GitHub Actions. `pytest` só roda quando alguém executa manualmente. O deploy do
-Vercel acontece sem gate de teste.
+### ~~Sem CI~~ — RESOLVIDO 2026-09-04
+`.github/workflows/test.yml` roda `pytest` a cada push e PR em `main`. Ainda não é gate
+rígido do deploy do Vercel (pipelines separados) — é sinal, não bloqueio.
 
 ### Dívida técnica — `@app.on_event` deprecado
 `main.py:118` usa `@app.on_event("startup")`, deprecado no FastAPI em favor do handler
