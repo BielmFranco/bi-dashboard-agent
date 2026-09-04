@@ -3,6 +3,12 @@
 Documento pra retomar dev do bi-agent em outra máquina sem quebrar nada.
 Estado congelado no commit `e794879` (branch `main`, remote push confirmado).
 
+> **Nota (2026-09-04):** este documento continua válido como guia narrativo, mas foi
+> parcialmente superado. Para o passo a passo atualizado e validado, use
+> [`03_SETUP.md`](03_SETUP.md). Para o estado atual do projeto, use
+> [`../PROGRESS.md`](../PROGRESS.md). Correções aplicadas neste arquivo estão marcadas
+> com "Atualizado 2026-09-04".
+
 ---
 
 ## 0. Estado atual do projeto (o que já foi feito)
@@ -159,10 +165,14 @@ Não versionado. Cria manual:
 
 ```env
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
-REPORT_API_URL=http://127.0.0.1:8000
 ```
 
-Estes 2 apontam pro backend local. Só troca pra URL do tunnel Cloudflare se for testar Vercel remoto.
+Aponta pro backend local. Só troca pra URL do tunnel Cloudflare se for testar Vercel remoto.
+
+> **Atualizado 2026-09-04:** `REPORT_API_URL` foi removida. A página `/report/[fileId]`
+> virou Client Component no commit `876c47b` e passou a usar `NEXT_PUBLIC_API_URL`.
+> Nenhum arquivo em `frontend/src/` lê `REPORT_API_URL` — pode apagar de `.env.local`
+> existentes.
 
 ### Rodar frontend
 
@@ -187,8 +197,11 @@ Imprime URL tipo `https://xxx-yyy-zzz.trycloudflare.com`. Copia essa URL.
 Atualiza no Vercel dashboard:
 1. <https://vercel.com/dashboard> → bi-agent → Settings → Environment Variables
 2. `NEXT_PUBLIC_API_URL` = URL do tunnel
-3. `REPORT_API_URL` = mesma URL
-4. Deployments → último → Redeploy
+3. Deployments → último → **Redeploy** (obrigatório)
+
+> **Atualizado 2026-09-04:** `REPORT_API_URL` não é mais necessária.
+> O **Redeploy é obrigatório** — `NEXT_PUBLIC_API_URL` é inlinada no bundle em tempo de
+> build; salvar a variável sozinha não muda nada no site publicado.
 
 **Nota**: URL do tunnel muda toda vez que reinicia `cloudflared`. Pendência conhecida — migrar pra named tunnel resolve.
 
@@ -349,12 +362,36 @@ Estado da roadmap deixada em aberto:
 
 ## 15. Onde tá tudo documentado
 
-- `README.md` — visão geral (mínimo por enquanto, Claude vai reescrever)
+**Atualizado 2026-09-04** — documentação forense completa criada em `docs/`:
+
+- `CLAUDE.md` — manual operacional do agente (comece aqui)
+- `PROGRESS.md` — estado atual, dívidas técnicas, próximo passo
+- `CHANGELOG.md` — histórico organizado por tipo de mudança
+- `docs/00_CONTEXT.md` — visão geral em 5 minutos
+- `docs/01_ARCHITECTURE.md` — arquitetura real com diagramas Mermaid
+- `docs/02_PROJECT_STRUCTURE.md` — mapa de arquivos e código morto
+- `docs/03_SETUP.md` — setup validado de máquina nova (supera a seção 4–5 deste arquivo)
+- `docs/04_BACKEND.md` · `docs/05_FRONTEND.md` — módulo a módulo
+- `docs/06_DATA_PIPELINE.md` — do upload ao insight
+- `docs/07_LLM.md` — cadeia de providers, prompts, determinístico vs. gerado
+- `docs/08_API.md` — todos os endpoints e esquemas
+- `docs/09_CONFIGURATION.md` — todas as variáveis de ambiente
+- `docs/10_TESTING.md` — testes + smoke test de 11 passos
+- `docs/11_TROUBLESHOOTING.md` — 20 problemas reais
+- `docs/12_TECHNICAL_DECISIONS.md` — 15 decisões com contexto e evidência
+- `docs/13_DEVELOPMENT_HISTORY.md` — os 51 commits em 9 fases
+- `docs/14_KNOWN_LIMITATIONS.md` — o que não funciona e por quê
+- `docs/15_CONTINUITY.md` — como retomar o trabalho
+
+Anteriores, preservados:
+
+- `README.md` — visão geral pública (reescrito em 2026-09-04)
 - `DEPLOY.md` — guia de deploy Railway/Vercel/Cloudflare
-- `docs/Documentacao_Tecnica_BI_Agent.docx` — doc técnica completa (19 seções, 700 linhas)
+- `docs/Documentacao_Tecnica_BI_Agent.docx` — doc técnica em .docx (19 seções)
 - `docs/HANDOFF_NOVO_PC.md` — este arquivo
 - `backend/.env.example` — todos parâmetros de config
 - `.claude/skills/graft/SKILL.md` — como usar graft
+- `.claude/skills/project-context/SKILL.md` — como manter doc e código sincronizados
 
 ---
 

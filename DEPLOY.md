@@ -23,9 +23,14 @@
 Adicione em **Variables**:
 
 ```
-GOOGLE_API_KEY=AIzaSy_ou_AQ.Ab8RN...      (sua key do AI Studio)
+GOOGLE_API_KEY=<sua-key-do-google-ai-studio>
 MODEL_ID=gemini-flash-latest
 FRONTEND_URL=https://<seu-projeto>.vercel.app
+```
+
+Opcional — provider primário (recomendado, mais rápido):
+```
+GROQ_API_KEY=<sua-key-do-groq>
 ```
 
 Opcional — se quiser aceitar Vercel preview deploys automaticamente:
