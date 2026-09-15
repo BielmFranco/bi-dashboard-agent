@@ -110,8 +110,8 @@ export default function Chat({
       <Card className="flex flex-col h-[26rem]">
         <CardHeader className="pb-3 border-b border-[var(--border)]">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-cyan-400/20 to-blue-500/20 border border-cyan-500/30">
-              <MessageSquare className="h-3.5 w-3.5 text-cyan-500" />
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#2dd4bf1f] border border-[#2dd4bf]/30">
+              <MessageSquare className="h-3.5 w-3.5 text-[#2dd4bf]" />
             </div>
             <CardTitle className="text-sm">Pergunte sobre a base</CardTitle>
           </div>

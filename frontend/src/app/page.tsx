@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Download, FileText, Loader2, RotateCw } from "lucide-react";
+import { Download, FileSpreadsheet, Loader2, RotateCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Chat from "@/components/Chat";
@@ -14,7 +14,6 @@ import KPICard from "@/components/KPICard";
 import Navbar from "@/components/Navbar";
 import ProfileSummary from "@/components/ProfileSummary";
 import Upload from "@/components/Upload";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -221,46 +220,90 @@ export default function Home() {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className="flex items-center gap-3 flex-wrap"
+              className="space-y-4"
             >
-              <Badge variant="secondary" className="gap-1.5">
-                <FileText className="h-3 w-3" />
-                Arquivo
-              </Badge>
-              <span className="font-mono text-sm text-[var(--foreground)] truncate max-w-md">
-                {filename ?? "—"}
-              </span>
-              {analyzing && (
-                <span className="ml-auto inline-flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Analisando...
-                </span>
-              )}
-              {profile && !analyzing && (
-                <div className="ml-auto flex items-center gap-3">
-                  <span className="inline-flex items-center gap-3 text-xs text-[var(--muted-foreground)]">
-                    <span className="tabular-nums">
-                      {profile.rows.toLocaleString("pt-BR")} linhas
-                    </span>
-                    <span className="w-px h-3 bg-[var(--border)]" />
-                    <span className="tabular-nums">{profile.cols} colunas</span>
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                    disabled={exporting}
-                    className="h-8"
-                  >
-                    {exporting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5" />
-                    )}
-                    <span className="text-xs">{exporting ? "Gerando..." : "Baixar PDF"}</span>
-                  </Button>
+              {/* Cabeçalho editorial — assinatura com serifa de display */}
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+                    Relatório analítico
+                  </p>
+                  <h1 className="font-display text-2xl sm:text-[1.7rem] font-medium leading-tight tracking-tight text-[var(--foreground)]">
+                    Panorama dos dados
+                  </h1>
                 </div>
-              )}
+                <span
+                  className="hidden shrink-0 pb-1 font-mono text-[11px] tabular-nums text-[var(--muted-foreground)] sm:block"
+                  suppressHydrationWarning
+                >
+                  {new Date().toLocaleDateString("pt-BR", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+
+              {/* Barra de comando — identidade do arquivo + métricas + ação */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-[var(--border)] bg-[var(--card)] px-4 py-3 shadow-[var(--shadow-card)]">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--primary-dim)] text-[var(--primary)]">
+                    <FileSpreadsheet className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="max-w-[15rem] truncate font-mono text-sm text-[var(--foreground)]">
+                      {filename ?? "—"}
+                    </p>
+                    <p className="text-[11px] text-[var(--muted-foreground)]">Fonte de dados</p>
+                  </div>
+                </div>
+
+                <div className="ml-auto flex items-center gap-3">
+                  {analyzing ? (
+                    <span className="inline-flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Analisando...
+                    </span>
+                  ) : profile ? (
+                    <>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="font-mono text-base font-medium leading-none tabular-nums text-[var(--foreground)]">
+                            {profile.rows.toLocaleString("pt-BR")}
+                          </p>
+                          <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-[var(--muted-foreground)]">
+                            linhas
+                          </p>
+                        </div>
+                        <span className="h-8 w-px bg-[var(--border)]" />
+                        <div className="text-right">
+                          <p className="font-mono text-base font-medium leading-none tabular-nums text-[var(--foreground)]">
+                            {profile.cols}
+                          </p>
+                          <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-[var(--muted-foreground)]">
+                            colunas
+                          </p>
+                        </div>
+                      </div>
+                      <span className="h-8 w-px bg-[var(--border)]" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="h-8"
+                      >
+                        {exporting ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5" />
+                        )}
+                        <span className="text-xs">{exporting ? "Gerando..." : "Baixar PDF"}</span>
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
+              </div>
             </motion.div>
 
             {analyzeError && (

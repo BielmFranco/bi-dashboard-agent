@@ -23,7 +23,7 @@ function corrColor(v: number | null | undefined): string {
   const t = Math.max(-1, Math.min(1, v));
   const alpha = Math.abs(t);
   if (t >= 0) {
-    // positive → primary blue-purple
+    // positive → esmeralda (cor primária da marca)
     return `color-mix(in oklab, var(--primary) ${Math.round(alpha * 90)}%, transparent)`;
   }
   // negative → warm red/orange

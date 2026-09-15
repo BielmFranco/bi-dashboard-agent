@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { animate, motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 import type { KPI } from "@/lib/api";
 import { fmtCompactBR, fmtNumberBR } from "@/lib/format";
 import { Card } from "@/components/ui/card";
@@ -22,7 +23,33 @@ function fmt(v: number | null, kind: KPI["format"]) {
 type Props = { kpi: KPI; index?: number };
 
 export default function KPICard({ kpi, index = 0 }: Props) {
-  const value = fmt(kpi.value, kpi.format);
+  const reduceMotion = useReducedMotion();
+  const target = kpi.value;
+  // Count-up: o número sobe de 0 ao valor final ao carregar, como um terminal
+  // inicializando. Desativado para quem prefere menos movimento.
+  const [display, setDisplay] = useState<number | null>(
+    target === null || target === undefined ? null : reduceMotion ? target : 0,
+  );
+
+  useEffect(() => {
+    if (target === null || target === undefined) {
+      setDisplay(null);
+      return;
+    }
+    if (reduceMotion) {
+      setDisplay(target);
+      return;
+    }
+    const controls = animate(0, target, {
+      duration: 0.85,
+      delay: index * 0.05,
+      ease: [0.16, 1, 0.3, 1],
+      onUpdate: (v) => setDisplay(v),
+    });
+    return () => controls.stop();
+  }, [target, reduceMotion, index]);
+
+  const value = fmt(display, kpi.format);
   const full =
     kpi.value !== null && kpi.value !== undefined
       ? kpi.value.toLocaleString("pt-BR", { maximumFractionDigits: 4 })
@@ -34,29 +61,30 @@ export default function KPICard({ kpi, index = 0 }: Props) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.04, ease: [0.16, 1, 0.3, 1] }}
     >
-      <Card className="group relative overflow-hidden p-5 transition-colors hover:border-[var(--muted-foreground)]/40">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--primary)]/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <Card className="group relative overflow-hidden p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[color-mix(in_oklab,var(--primary)_40%,var(--border))] hover:shadow-[var(--shadow-card-hover)]">
+        {/* Marca esmeralda vertical — âncora visual da célula de dados */}
+        <span className="absolute left-0 top-4 bottom-4 w-[3px] rounded-full bg-[var(--primary-dim)] transition-colors group-hover:bg-[var(--primary)]" />
 
-        <p className="text-[10px] uppercase tracking-widest text-[var(--muted-foreground)] font-medium">
-          {kpi.label}
-        </p>
+        <div className="pl-3">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+            {kpi.label}
+          </p>
 
-        <TooltipProvider delayDuration={200}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <p
-                className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-[var(--foreground)] truncate cursor-default"
-              >
-                {value}
-              </p>
-            </TooltipTrigger>
-            {full && full !== value && (
-              <TooltipContent>
-                <span className="font-mono text-xs">{full}</span>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="mt-2.5 font-mono text-[1.7rem] font-medium tnum tracking-tight text-[var(--foreground)] truncate cursor-default">
+                  {value}
+                </p>
+              </TooltipTrigger>
+              {full && full !== value && (
+                <TooltipContent>
+                  <span className="font-mono text-xs">{full}</span>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </Card>
     </motion.div>
   );

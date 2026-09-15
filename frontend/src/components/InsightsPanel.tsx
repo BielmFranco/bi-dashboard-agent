@@ -39,8 +39,8 @@ export default function InsightsPanel({ insights, loading, onRun, onStop }: Prop
       <Card className="flex flex-col min-h-[26rem]">
         <CardHeader className="flex-row items-center justify-between pb-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-amber-400/20 to-orange-500/20 border border-amber-500/30">
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--primary-dim)] border border-[var(--primary)]/30">
+              <Sparkles className="h-3.5 w-3.5 text-[var(--primary)]" />
             </div>
             <CardTitle className="text-sm">Insights estratégicos</CardTitle>
           </div>
@@ -95,8 +95,8 @@ export default function InsightsPanel({ insights, loading, onRun, onStop }: Prop
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-14 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400/10 to-orange-500/10 border border-amber-500/20 mb-4">
-                <Sparkles className="h-5 w-5 text-amber-500" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--primary-dim)] border border-[var(--primary)]/20 mb-4">
+                <Sparkles className="h-5 w-5 text-[var(--primary)]" />
               </div>
               <p className="text-sm font-medium text-[var(--foreground)] mb-1">
                 Análise em linguagem natural

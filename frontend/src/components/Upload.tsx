@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { Brain, Download, FileSpreadsheet, BarChart3, Zap, UploadCloud } from "lucide-react";
+import { Brain, Download, FileSpreadsheet, BarChart3, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -37,27 +37,29 @@ export default function Upload({ onUploaded, disabled }: Props) {
 
   return (
     <div className="relative">
+      <div className="bg-grid glow-emerald pointer-events-none absolute inset-x-0 -top-8 h-[420px]" aria-hidden />
+
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="mx-auto max-w-4xl text-center pt-4 pb-6"
+        className="relative mx-auto max-w-3xl text-center pt-6 pb-8"
       >
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1 text-xs text-[var(--muted-foreground)]">
-          <Brain className="h-3 w-3 text-[var(--primary)]" />
-          Powered by Groq + Gemini
+        <div className="mb-5 inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary)] shadow-[0_0_10px_var(--primary)]" />
+          Planilha → Decisão
         </div>
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-[var(--foreground)] leading-[1.15]">
-          Sua planilha vira dashboard.
-          <br />
-          <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
-            Sem código. Sem espera.
+        <h1 className="font-display text-[2.7rem] sm:text-6xl font-medium tracking-[-0.02em] text-[var(--foreground)] leading-[1.02]">
+          Seus dados,{" "}
+          <span className="text-[var(--primary)] italic">lidos de verdade</span>
+          <span className="block text-[var(--muted-foreground)] font-normal">
+            em segundos, não em planilhas.
           </span>
         </h1>
-        <p className="mt-4 text-sm sm:text-base text-[var(--muted-foreground)] max-w-lg mx-auto leading-relaxed">
-          Faça upload de qualquer <strong className="text-[var(--foreground)]">.xlsx</strong> ou{" "}
-          <strong className="text-[var(--foreground)]">.csv</strong> e receba
-          KPIs, gráficos interativos e análise estratégica gerada por IA em segundos.
+        <p className="mx-auto mt-6 max-w-xl text-sm sm:text-[15px] text-[var(--muted-foreground)] leading-relaxed">
+          Envie um <span className="font-mono text-[var(--foreground)]">.xlsx</span> ou{" "}
+          <span className="font-mono text-[var(--foreground)]">.csv</span> e receba KPIs, gráficos
+          interativos e análise estratégica. Cada número é calculado — nunca chutado pela IA.
         </p>
       </motion.div>
 
@@ -89,27 +91,42 @@ export default function Upload({ onUploaded, disabled }: Props) {
             }
           }}
           className={`
-            relative overflow-hidden rounded-2xl border-2 border-dashed transition-all cursor-pointer
+            group relative overflow-hidden rounded-lg border transition-all cursor-pointer
             ${
               dragOver
-                ? "border-[var(--primary)] bg-[color-mix(in_oklab,var(--primary)_8%,transparent)] scale-[1.01]"
-                : "border-[var(--border)] bg-[var(--card)] hover:border-[var(--muted-foreground)]/40"
+                ? "border-[var(--primary)] bg-[color-mix(in_oklab,var(--primary)_9%,var(--card))]"
+                : "border-[color-mix(in_oklab,var(--primary)_38%,var(--border))] bg-[var(--card)] hover:border-[color-mix(in_oklab,var(--primary)_65%,var(--border))]"
             }
             ${disabled || uploading ? "opacity-60 pointer-events-none" : ""}
             p-10 sm:p-14
           `}
         >
+          {/* Marcas de corte nos cantos — detalhe técnico/editorial */}
+          {[
+            "left-2 top-2 border-l border-t",
+            "right-2 top-2 border-r border-t",
+            "left-2 bottom-2 border-l border-b",
+            "right-2 bottom-2 border-r border-b",
+          ].map((pos) => (
+            <span
+              key={pos}
+              aria-hidden
+              className={`pointer-events-none absolute h-3 w-3 transition-colors ${pos} ${
+                dragOver ? "border-[var(--primary)]" : "border-[var(--primary)]/60 group-hover:border-[var(--primary)]"
+              }`}
+            />
+          ))}
+
           <div className="relative flex flex-col items-center gap-5 text-center">
             <div
-              className={`relative flex h-16 w-16 items-center justify-center rounded-2xl transition-all
+              className={`relative flex h-14 w-14 items-center justify-center rounded-md transition-all
                 ${
                   dragOver
-                    ? "bg-[var(--primary)] text-[var(--primary-foreground)] scale-110"
-                    : "bg-[var(--muted)] text-[var(--muted-foreground)]"
+                    ? "bg-[var(--primary)] text-[var(--primary-foreground)] scale-105"
+                    : "bg-[var(--primary-dim)] text-[var(--primary)] group-hover:scale-105"
                 }`}
             >
-              <UploadCloud className="h-7 w-7" strokeWidth={1.75} />
-              <div className="absolute -inset-2 rounded-2xl border border-[var(--primary)]/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <UploadCloud className="h-6 w-6" strokeWidth={1.75} />
             </div>
 
             <div>
@@ -165,9 +182,13 @@ export default function Upload({ onUploaded, disabled }: Props) {
         transition={{ duration: 0.4, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
         className="mx-auto max-w-4xl mt-10"
       >
-        <p className="text-center text-xs font-medium uppercase tracking-widest text-[var(--muted-foreground)] mb-8">
-          Como funciona
-        </p>
+        <div className="mb-8 flex items-center justify-center gap-3">
+          <span className="h-px w-8 bg-[var(--border)]" />
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+            Como funciona
+          </p>
+          <span className="h-px w-8 bg-[var(--border)]" />
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {[
             {
@@ -201,7 +222,7 @@ export default function Upload({ onUploaded, disabled }: Props) {
           ].map((item) => (
             <div
               key={item.step}
-              className="group relative rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-hidden transition-all hover:border-[var(--primary)]/50 hover:shadow-[0_0_24px_-4px_rgba(79,70,229,0.15)]"
+              className="group relative overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] transition-all hover:border-[color-mix(in_oklab,var(--primary)_50%,var(--border))] hover:shadow-[0_1px_0_var(--primary)]"
             >
               <div className="relative h-40 overflow-hidden border-b border-[var(--border)]">
                 <Image
@@ -215,7 +236,7 @@ export default function Upload({ onUploaded, disabled }: Props) {
               </div>
               <div className="p-4">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary)]/10 text-[var(--primary)]">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--primary-dim)] text-[var(--primary)]">
                     <item.icon className="h-4 w-4" strokeWidth={2} />
                   </div>
                   <span className="text-[10px] font-mono font-semibold text-[var(--muted-foreground)]">

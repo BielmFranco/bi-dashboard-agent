@@ -3,6 +3,7 @@
 import { Filter, X, Hash, Calendar, ToggleLeft, Tag, Check } from "lucide-react";
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { ColumnProfile, FilterMap, FilterSpec, Profile } from "@/lib/api";
+import { fmtNumberBR } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -270,13 +271,28 @@ export default function FilterBar({
             })}
           </div>
 
-          <div className="border-t border-[var(--border)] px-4 py-3 flex items-center justify-between gap-3 bg-[var(--muted)]/30">
-            <p className="text-[11px] text-[var(--muted-foreground)]">
-              {isDirty
-                ? "Alterações pendentes — clique Aplicar para atualizar o dashboard."
-                : activeCount > 0
-                  ? `${activeCount} filtro${activeCount > 1 ? "s" : ""} ativo${activeCount > 1 ? "s" : ""}`
-                  : "Selecione filtros acima para refinar os dados."}
+          <div
+            className={`border-t px-4 py-3 flex items-center justify-between gap-3 transition-colors ${
+              isDirty
+                ? "border-[var(--primary)]/25 bg-[var(--primary-dim)]"
+                : "border-[var(--border)] bg-[var(--muted)]/30"
+            }`}
+          >
+            <p
+              className={`text-[11px] transition-colors ${
+                isDirty ? "text-[var(--primary)] font-medium" : "text-[var(--muted-foreground)]"
+              }`}
+            >
+              {isDirty ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
+                  Alterações pendentes — clique Aplicar para atualizar o dashboard.
+                </span>
+              ) : activeCount > 0 ? (
+                `${activeCount} filtro${activeCount > 1 ? "s" : ""} ativo${activeCount > 1 ? "s" : ""}`
+              ) : (
+                "Selecione filtros acima para refinar os dados."
+              )}
             </p>
             <div className="flex items-center gap-2 shrink-0">
               {(activeCount > 0 || isDirty) && (
@@ -294,7 +310,9 @@ export default function FilterBar({
                 size="sm"
                 onClick={applyDraft}
                 disabled={!isDirty || loading}
-                className="gap-1.5 h-7"
+                className={`gap-1.5 h-7 transition-shadow ${
+                  isDirty ? "ring-2 ring-[var(--primary)]/40 shadow-sm shadow-[var(--primary)]/30" : ""
+                }`}
               >
                 <Check className="h-3 w-3" />
                 Aplicar filtros
@@ -305,6 +323,16 @@ export default function FilterBar({
       )}
     </div>
   );
+}
+
+function toNum(v: number | string | null | undefined, numeric: boolean): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = numeric ? Number(v) : Date.parse(String(v));
+  return Number.isFinite(n) ? n : null;
+}
+
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, v));
 }
 
 function RangeInput({
@@ -322,8 +350,13 @@ function RangeInput({
   minHint?: number | string | null;
   maxHint?: number | string | null;
 }) {
+  const numeric = kind === "numeric";
   const min = current?.op === "range" ? current.min : undefined;
   const max = current?.op === "range" ? current.max : undefined;
+
+  const lo = toNum(minHint, numeric);
+  const hi = toNum(maxHint, numeric);
+  const hasSlider = lo !== null && hi !== null && hi > lo;
 
   function update(part: "min" | "max", raw: string) {
     const next: { min?: number | string | null; max?: number | string | null } = {
@@ -331,17 +364,95 @@ function RangeInput({
       max: max ?? null,
     };
     if (raw === "") next[part] = null;
-    else next[part] = kind === "numeric" ? Number(raw) : raw;
+    else next[part] = numeric ? Number(raw) : raw;
     if (next.min === null && next.max === null) onChange(null);
     else onChange({ op: "range", min: next.min ?? undefined, max: next.max ?? undefined });
+  }
+
+  // Converte um valor numérico do slider de volta ao formato do filtro.
+  function fromNum(v: number): number | string {
+    if (numeric) return v;
+    return new Date(v).toISOString().slice(0, 10);
+  }
+
+  function commit(aNum: number, bNum: number) {
+    if (lo === null || hi === null) return;
+    const a = clamp(Math.min(aNum, bNum), lo, hi);
+    const b = clamp(Math.max(aNum, bNum), lo, hi);
+    const atLo = a <= lo;
+    const atHi = b >= hi;
+    if (atLo && atHi) {
+      onChange(null); // faixa cheia = sem restrição
+      return;
+    }
+    onChange({
+      op: "range",
+      min: atLo ? undefined : fromNum(a),
+      max: atHi ? undefined : fromNum(b),
+    });
   }
 
   const inputCls =
     "w-full text-[11px] rounded-md border border-[var(--border)] bg-[var(--muted)]/40 px-2.5 py-1.5 outline-none focus:border-[var(--ring)] focus:ring-1 focus:ring-[var(--ring)] transition-colors";
 
+  // Estado atual em número, para posicionar o slider (default = limites).
+  let curMinNum = lo ?? 0;
+  let curMaxNum = hi ?? 0;
+  if (hasSlider) {
+    curMinNum = clamp(toNum(min, numeric) ?? lo!, lo!, hi!);
+    curMaxNum = clamp(toNum(max, numeric) ?? hi!, lo!, hi!);
+  }
+  const range = hasSlider ? hi! - lo! : 1;
+  const step = numeric
+    ? Number.isInteger(lo) && Number.isInteger(hi)
+      ? Math.max(1, Math.round(range / 100))
+      : range / 100
+    : 86_400_000; // 1 dia em ms
+  const pctMin = hasSlider ? ((curMinNum - lo!) / range) * 100 : 0;
+  const pctMax = hasSlider ? ((curMaxNum - lo!) / range) * 100 : 100;
+  const fmtBound = (v: number) =>
+    numeric ? fmtNumberBR(v, { maximumFractionDigits: 2 }) : new Date(v).toISOString().slice(0, 10);
+
   return (
-    <div className="space-y-1.5">
-      {(minHint !== undefined && minHint !== null) || (maxHint !== undefined && maxHint !== null) ? (
+    <div className="space-y-2">
+      {hasSlider ? (
+        <div className="pt-0.5">
+          <div className="mb-2 text-center font-mono text-[10px] tabular-nums text-[var(--muted-foreground)]">
+            {fmtBound(curMinNum)}
+            <span className="mx-1.5 text-[var(--primary)]">—</span>
+            {fmtBound(curMaxNum)}
+          </div>
+          <div className="relative h-4">
+            <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--muted)]" />
+            <div
+              className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--primary)]"
+              style={{ left: `${pctMin}%`, right: `${100 - pctMax}%` }}
+            />
+            <input
+              type="range"
+              className="range-input"
+              min={lo!}
+              max={hi!}
+              step={step}
+              value={curMinNum}
+              onChange={(e) => commit(Number(e.target.value), curMaxNum)}
+              aria-label={`${col} mínimo`}
+              style={{ zIndex: pctMin > 88 ? 5 : 3 }}
+            />
+            <input
+              type="range"
+              className="range-input"
+              min={lo!}
+              max={hi!}
+              step={step}
+              value={curMaxNum}
+              onChange={(e) => commit(curMinNum, Number(e.target.value))}
+              aria-label={`${col} máximo`}
+              style={{ zIndex: 4 }}
+            />
+          </div>
+        </div>
+      ) : (minHint !== undefined && minHint !== null) || (maxHint !== undefined && maxHint !== null) ? (
         <div className="text-[9px] text-[var(--muted-foreground)] flex items-center gap-1.5">
           <span className="inline-block h-px flex-1 bg-[var(--border)]" />
           <span>
@@ -350,6 +461,7 @@ function RangeInput({
           <span className="inline-block h-px flex-1 bg-[var(--border)]" />
         </div>
       ) : null}
+
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-0.5">
           <label className="text-[9px] font-medium text-[var(--muted-foreground)] uppercase tracking-wide">

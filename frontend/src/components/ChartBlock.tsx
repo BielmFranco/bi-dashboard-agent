@@ -5,13 +5,13 @@ import type { BoxplotStats, ChartSpec } from "@/lib/api";
 import Boxplot from "@/components/Boxplot";
 import { fmtCompactBR, fmtNumberBR, truncate } from "@/lib/format";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
   Legend,
-  Line,
-  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -28,15 +28,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+// Paleta categórica com base esmeralda/teal — coesa com a marca,
+// com âmbar/laranja como contraste quente pontual.
 const COLORS = [
   "var(--primary)",
+  "#2dd4bf",
   "#22d3ee",
-  "#34d399",
-  "#f472b6",
-  "#facc15",
+  "#a3e635",
+  "#fbbf24",
+  "#38bdf8",
   "#fb923c",
-  "#a78bfa",
-  "#f87171",
+  "#94a3b8",
 ];
 
 function fmtLabel(v: unknown) {
@@ -49,6 +51,71 @@ const numberFormatter = (v: number | string) =>
   fmtNumberBR(typeof v === "number" ? v : Number(v));
 const compactFormatter = (v: number | string) =>
   fmtCompactBR(typeof v === "number" ? v : Number(v));
+
+// Ticks dos eixos em fonte monoespaçada tabular — leitura de "planilha/terminal".
+const tickStyle = {
+  fill: "var(--muted-foreground)",
+  fontSize: 10.5,
+  fontFamily: "var(--font-mono)",
+} as const;
+
+type TTItem = {
+  color?: string;
+  value?: number | string;
+  name?: string;
+  payload?: { label?: string };
+};
+
+/** Tooltip premium: swatch de cor + número mono tabular. */
+function ChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: TTItem[];
+  label?: unknown;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const title =
+    label !== undefined && label !== null && String(label) !== ""
+      ? fmtLabel(label)
+      : payload[0]?.payload?.label
+        ? fmtLabel(payload[0].payload.label)
+        : "";
+
+  return (
+    <div className="min-w-[7rem] rounded-md border border-[var(--border)] bg-[var(--card)] px-2.5 py-2 shadow-lg shadow-black/25">
+      {title && (
+        <div className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-[var(--muted-foreground)]">
+          {truncate(title, 22)}
+        </div>
+      )}
+      <div className="space-y-1">
+        {payload.map((p, i) => {
+          const name = p.name != null ? String(p.name) : "";
+          const showName = name !== "" && name !== "value";
+          return (
+            <div key={i} className="flex items-center gap-2">
+              <span
+                className="h-2 w-2 shrink-0 rounded-[2px]"
+                style={{ background: p.color || "var(--primary)" }}
+              />
+              <span className="font-mono text-xs tabular-nums text-[var(--foreground)]">
+                {numberFormatter(Number(p.value))}
+              </span>
+              {showName && (
+                <span className="ml-auto max-w-[8rem] truncate pl-2 text-[11px] text-[var(--muted-foreground)]">
+                  {truncate(name, 16)}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 type Props = {
   chart: ChartSpec;
@@ -84,24 +151,9 @@ export default function ChartBlock({ chart, index = 0, onDrill }: Props) {
 
   const data = (chart.data as { label?: string; value?: number; x?: number; y?: number }[]).map((d) => ({ ...d, label: fmtLabel(d.label) }));
 
-  const axisColor = "var(--muted-foreground)";
   const gridColor = "var(--border)";
-  const tooltipStyle = {
-    background: "var(--card)",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
-    color: "var(--card-foreground)",
-    fontSize: 12,
-    padding: "8px 10px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-  } as const;
-  const tooltipItemStyle = { color: "var(--card-foreground)" } as const;
-  const tooltipLabelStyle = {
-    color: "var(--muted-foreground)",
-    fontSize: 11,
-    marginBottom: 4,
-    fontWeight: 500,
-  } as const;
+  const valueName = chart.y_label || "Valor";
+  const areaId = `area-${chart.id}`;
 
   return (
     <motion.div
@@ -118,11 +170,10 @@ export default function ChartBlock({ chart, index = 0, onDrill }: Props) {
           <ResponsiveContainer width="100%" height="100%">
             {chart.type === "bar" ? (
               <BarChart data={data} margin={{ top: 6, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid stroke={gridColor} strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid stroke={gridColor} strokeDasharray="2 6" strokeOpacity={0.6} vertical={false} />
                 <XAxis
                   dataKey="label"
-                  stroke={axisColor}
-                  fontSize={10.5}
+                  tick={tickStyle}
                   interval={0}
                   angle={-25}
                   textAnchor="end"
@@ -132,23 +183,23 @@ export default function ChartBlock({ chart, index = 0, onDrill }: Props) {
                   tickFormatter={(v) => truncate(String(v), 12)}
                 />
                 <YAxis
-                  stroke={axisColor}
-                  fontSize={10.5}
+                  tick={tickStyle}
+                  width={44}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={compactFormatter}
                 />
                 <Tooltip
-                  cursor={{ fill: "var(--muted)", opacity: 0.4 }}
-                  contentStyle={tooltipStyle}
-                  itemStyle={tooltipItemStyle}
-                  labelStyle={tooltipLabelStyle}
-                  formatter={(v: number) => [numberFormatter(v), chart.y_label || "Valor"]}
+                  cursor={{ fill: "var(--primary)", opacity: 0.08 }}
+                  content={<ChartTooltip />}
                 />
                 <Bar
                   dataKey="value"
+                  name={valueName}
                   fill="var(--primary)"
-                  radius={[6, 6, 0, 0]}
+                  fillOpacity={0.88}
+                  radius={[5, 5, 0, 0]}
+                  activeBar={{ fillOpacity: 1 }}
                   cursor={onDrill && chart.x_label ? "pointer" : "default"}
                   onClick={(d: unknown) => {
                     if (!onDrill || !chart.x_label) return;
@@ -159,38 +210,43 @@ export default function ChartBlock({ chart, index = 0, onDrill }: Props) {
                 />
               </BarChart>
             ) : chart.type === "line" ? (
-              <LineChart data={data} margin={{ top: 6, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid stroke={gridColor} strokeDasharray="3 3" vertical={false} />
+              <AreaChart data={data} margin={{ top: 6, right: 12, left: 0, bottom: 5 }}>
+                <defs>
+                  <linearGradient id={areaId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.32} />
+                    <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke={gridColor} strokeDasharray="2 6" strokeOpacity={0.6} vertical={false} />
                 <XAxis
                   dataKey="label"
-                  stroke={axisColor}
-                  fontSize={10.5}
+                  tick={tickStyle}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(v) => truncate(String(v), 12)}
                 />
                 <YAxis
-                  stroke={axisColor}
-                  fontSize={10.5}
+                  tick={tickStyle}
+                  width={44}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={compactFormatter}
                 />
                 <Tooltip
-                  contentStyle={tooltipStyle}
-                  itemStyle={tooltipItemStyle}
-                  labelStyle={tooltipLabelStyle}
-                  formatter={(v: number) => [numberFormatter(v), chart.y_label || "Valor"]}
+                  cursor={{ stroke: "var(--primary)", strokeOpacity: 0.35, strokeWidth: 1 }}
+                  content={<ChartTooltip />}
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="value"
+                  name={valueName}
                   stroke="var(--primary)"
                   strokeWidth={2}
-                  dot={{ r: 3, fill: "var(--primary)" }}
-                  activeDot={{ r: 5 }}
+                  fill={`url(#${areaId})`}
+                  dot={false}
+                  activeDot={{ r: 4, fill: "var(--primary)", stroke: "var(--card)", strokeWidth: 2 }}
                 />
-              </LineChart>
+              </AreaChart>
             ) : chart.type === "pie" ? (
               <PieChart>
                 <Pie
@@ -220,15 +276,7 @@ export default function ChartBlock({ chart, index = 0, onDrill }: Props) {
                     />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={tooltipStyle}
-                  itemStyle={tooltipItemStyle}
-                  labelStyle={tooltipLabelStyle}
-                  formatter={(v: number, _n: string, p: { payload?: { label?: string } }) => [
-                    numberFormatter(v),
-                    p.payload?.label ?? "",
-                  ]}
-                />
+                <Tooltip content={<ChartTooltip />} />
                 <Legend
                   wrapperStyle={{ fontSize: 10.5, paddingTop: 4 }}
                   iconSize={9}
@@ -238,12 +286,11 @@ export default function ChartBlock({ chart, index = 0, onDrill }: Props) {
                 />
               </PieChart>
             ) : (
-              <ScatterChart margin={{ top: 6, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid stroke={gridColor} strokeDasharray="3 3" />
+              <ScatterChart margin={{ top: 6, right: 12, left: 0, bottom: 5 }}>
+                <CartesianGrid stroke={gridColor} strokeDasharray="2 6" strokeOpacity={0.6} />
                 <XAxis
                   dataKey="x"
-                  stroke={axisColor}
-                  fontSize={10.5}
+                  tick={tickStyle}
                   name={chart.x_label}
                   tickLine={false}
                   axisLine={false}
@@ -251,21 +298,18 @@ export default function ChartBlock({ chart, index = 0, onDrill }: Props) {
                 />
                 <YAxis
                   dataKey="y"
-                  stroke={axisColor}
-                  fontSize={10.5}
+                  tick={tickStyle}
+                  width={44}
                   name={chart.y_label}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={compactFormatter}
                 />
                 <Tooltip
-                  contentStyle={tooltipStyle}
-                  itemStyle={tooltipItemStyle}
-                  labelStyle={tooltipLabelStyle}
+                  content={<ChartTooltip />}
                   cursor={{ strokeDasharray: "3 3", stroke: "var(--muted-foreground)" }}
-                  formatter={(v: number) => numberFormatter(v)}
                 />
-                <Scatter data={data} fill="var(--primary)" fillOpacity={0.7} />
+                <Scatter data={data} fill="var(--primary)" fillOpacity={0.72} />
               </ScatterChart>
             )}
           </ResponsiveContainer>

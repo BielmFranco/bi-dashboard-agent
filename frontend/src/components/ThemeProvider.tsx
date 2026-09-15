@@ -30,13 +30,14 @@ function resolveSystem(): "light" | "dark" {
 }
 
 export default function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
+  const [theme, setThemeState] = useState<Theme>("dark");
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("dark");
 
   useEffect(() => {
+    // Dark-first: sem preferência salva, a experiência padrão é escura.
     const stored = (typeof localStorage !== "undefined"
       ? (localStorage.getItem("theme") as Theme | null)
-      : null) ?? "system";
+      : null) ?? "dark";
     setThemeState(stored);
   }, []);
 

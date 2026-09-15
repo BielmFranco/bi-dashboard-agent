@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Inter } from "next/font/google";
+import { Fraunces, Geist_Mono, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import ThemeProvider from "@/components/ThemeProvider";
 import "./globals.css";
@@ -16,6 +16,16 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+// Serifa editorial de display — dá gravidade jornalística ao título,
+// em contraste com os números monoespaçados. É o oposto do "template de IA".
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
   title: "BI Dashboard Agent",
   description:
@@ -30,13 +40,13 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${inter.variable} ${geistMono.variable}`}
+      className={`${inter.variable} ${geistMono.variable} ${fraunces.variable}`}
       suppressHydrationWarning
     >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var s=localStorage.getItem('theme')||'system';var d=s==='dark'||(s==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}`,
+            __html: `try{var s=localStorage.getItem('theme')||'dark';var d=s==='dark'||(s==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){document.documentElement.classList.add('dark');}`,
           }}
         />
       </head>

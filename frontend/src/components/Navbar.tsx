@@ -24,17 +24,20 @@ export default function Navbar({ onReset, hasSession }: Props) {
               onReset();
             }
           }}
-          className="flex items-center gap-2.5 group"
+          className="group flex items-center gap-2.5"
           aria-label={hasSession ? "Voltar para tela inicial" : "BI Agent"}
         >
           <span
-            className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md ring-1 ring-inset ring-white/10 transition-transform group-hover:scale-105"
+            className="relative flex h-7 w-7 items-center justify-center rounded-[5px] bg-[var(--primary)] text-[var(--primary-foreground)] transition-transform group-hover:-translate-y-px"
             aria-hidden
           >
-            <Brain className="h-4.5 w-4.5" strokeWidth={2.5} />
+            <Brain className="h-4 w-4" strokeWidth={2.5} />
           </span>
-          <span className="text-base font-bold tracking-tight bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
+          <span className="font-mono text-sm font-semibold tracking-tight text-[var(--foreground)]">
             BI Agent
+            <span className="text-[var(--primary)] caret-blink" aria-hidden>
+              _
+            </span>
           </span>
         </Link>
 
@@ -60,7 +63,7 @@ export default function Navbar({ onReset, hasSession }: Props) {
           {hasSession && onReset && (
             <button
               onClick={onReset}
-              className="text-xs font-medium text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 px-3 py-1.5 rounded-lg transition-all inline-flex items-center gap-1.5 shadow-sm"
+              className="text-xs font-medium text-[var(--primary-foreground)] bg-[var(--primary)] hover:opacity-90 px-3 py-1.5 rounded-md transition-all inline-flex items-center gap-1.5 shadow-sm shadow-[var(--primary)]/20"
             >
               <Plus className="h-3.5 w-3.5" />
               Nova análise
