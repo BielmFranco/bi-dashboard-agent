@@ -19,7 +19,14 @@ from typing import Any
 
 import pandas as pd
 
+from analyzer import _try_parse_dates
+
 log = logging.getLogger("bi.filters")
+
+
+def _parse_bound(x: Any) -> pd.Timestamp:
+    """Parseia um limite de data (min/max) com a mesma lógica ciente de formato."""
+    return _try_parse_dates(pd.Series([str(x)])).iloc[0]
 
 
 def apply_filters(df: pd.DataFrame, filters: dict[str, Any] | None) -> pd.DataFrame:
@@ -45,13 +52,13 @@ def apply_filters(df: pd.DataFrame, filters: dict[str, Any] | None) -> pd.DataFr
                 if mx is not None:
                     mask &= series <= float(mx)
             else:
-                # try datetime range
+                # try datetime range (ciente do formato: ISO vs DD/MM/AAAA)
                 try:
-                    parsed = pd.to_datetime(series, errors="coerce", dayfirst=True)
+                    parsed = _try_parse_dates(series.astype(str))
                     if mn is not None:
-                        mask &= parsed >= pd.to_datetime(mn, dayfirst=True)
+                        mask &= parsed >= _parse_bound(mn)
                     if mx is not None:
-                        mask &= parsed <= pd.to_datetime(mx, dayfirst=True)
+                        mask &= parsed <= _parse_bound(mx)
                 except Exception:
                     log.warning("Range filter failed for %s", col)
         elif op == "eq":

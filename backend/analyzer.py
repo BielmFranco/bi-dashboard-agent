@@ -2,21 +2,41 @@
 from __future__ import annotations
 
 import math
+import re
 import warnings
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+# Datas em ordem ano-primeiro (AAAA-MM-DD / AAAA-M-D), com ou sem hora.
+_ISO_DATE_RE = re.compile(r"^\s*\d{4}-\d{1,2}-\d{1,2}")
+
+
+def _looks_iso(sample: pd.Series) -> bool:
+    """True quando a maioria dos valores está no formato ISO (ano primeiro)."""
+    s = sample.astype(str).str.strip()
+    s = s[(s != "") & (~s.str.lower().isin(["nan", "nat", "none"]))]
+    if len(s) == 0:
+        return False
+    return bool(s.str.match(_ISO_DATE_RE).mean() >= 0.8)
+
 
 def _try_parse_dates(sample: pd.Series) -> pd.Series:
-    """Parse ambiguous date-like strings without polluting logs.
+    """Parse date-like strings, ciente do formato.
 
-    Uses `format="mixed"` so pandas parses row-by-row without falling back
-    silently to dateutil (which emits UserWarning every call).
+    Datas ISO (AAAA-MM-DD) são parseadas como ISO — usar `dayfirst=True` nelas
+    trocaria dia↔mês quando o dia <= 12 (ex.: 2025-01-06 viraria 2025-06-01).
+    Formatos brasileiros (DD/MM/AAAA) e ambíguos mantêm `dayfirst=True`.
+    `format="mixed"` evita o UserWarning que o pandas emite ao cair no dateutil.
     """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
+        if _looks_iso(sample):
+            try:
+                return pd.to_datetime(sample, errors="coerce", format="ISO8601")
+            except (ValueError, TypeError):
+                return pd.to_datetime(sample, errors="coerce")
         try:
             return pd.to_datetime(sample, errors="coerce", dayfirst=True, format="mixed")
         except (ValueError, TypeError):

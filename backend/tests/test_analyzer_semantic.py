@@ -9,8 +9,9 @@ os.environ.setdefault("GROQ_API_KEY", "test")
 
 import pandas as pd  # noqa: E402
 
-from analyzer import _infer_semantic, profile_dataframe  # noqa: E402
+from analyzer import _infer_semantic, _try_parse_dates, profile_dataframe  # noqa: E402
 from dashboard_planner import build_plan  # noqa: E402
+from filters import apply_filters  # noqa: E402
 
 
 # ---- date detection (bug: text dates trapped as categorical) ----
@@ -52,6 +53,47 @@ def test_date_column_produces_time_series_chart():
     plan = build_plan(df, prof)
     assert any(c["type"] == "line" for c in plan["charts"]), \
         f"expected a line chart, got {[c['type'] for c in plan['charts']]}"
+
+
+# ---- date format awareness (bug: dayfirst=True swaps day/month on ISO dates) ----
+
+def test_iso_dates_not_dayfirst_swapped():
+    # Dia <= 12 em ISO: dayfirst=True trocaria dia<->mes (2025-01-06 -> 2025-06-01).
+    s = pd.Series(["2025-01-06", "2025-09-08", "2025-02-03"])
+    parsed = _try_parse_dates(s)
+    assert parsed.min() == pd.Timestamp("2025-01-06")
+    assert parsed.max() == pd.Timestamp("2025-09-08")
+
+
+def test_profile_iso_date_minmax_correct():
+    # Todas as datas com dia <= 12 — regressao do min/max errado no perfil.
+    df = pd.DataFrame({
+        "data": [f"2025-01-{d:02d}" for d in range(1, 13)],
+        "receita": list(range(1, 13)),
+    })
+    prof = profile_dataframe(df, sample_n=5)
+    col = next(c for c in prof["columns"] if c["name"] == "data")
+    assert col["semantic"] == "datetime_like"
+    assert str(col["min_date"]).startswith("2025-01-01")
+    assert str(col["max_date"]).startswith("2025-01-12")
+
+
+def test_br_slash_dates_still_dayfirst():
+    # Formato brasileiro DD/MM/AAAA: 06/01/2025 = 6 de janeiro (nao 1 de junho).
+    s = pd.Series(["06/01/2025", "08/09/2025"])
+    parsed = _try_parse_dates(s)
+    assert parsed.iloc[0] == pd.Timestamp("2025-01-06")
+    assert parsed.iloc[1] == pd.Timestamp("2025-09-08")
+
+
+def test_range_filter_on_iso_dates():
+    # Filtro de intervalo com datas ISO (dia <= 12) deve selecionar as linhas certas.
+    df = pd.DataFrame({
+        "data": ["2025-01-06", "2025-03-10", "2025-06-08", "2025-09-08"],
+        "v": [1, 2, 3, 4],
+    })
+    out = apply_filters(df, {"data": {"op": "range", "min": "2025-03-01", "max": "2025-06-30"}})
+    assert list(out["v"]) == [2, 3]
 
 
 # ---- group summaries (bug: chat could not answer per-group aggregation) ----

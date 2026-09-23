@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 
-from analyzer import _safe
+from analyzer import _safe, _try_parse_dates
 
 
 def _numeric_cols(profile: dict) -> list[dict]:
@@ -64,7 +64,7 @@ def _agg_by(df: pd.DataFrame, dim: str, metric: str, agg: str = "sum", top: int 
 
 def _time_series(df: pd.DataFrame, date_col: str, metric: str, freq: str = "ME") -> list[dict]:
     s = df[[date_col, metric]].copy()
-    s[date_col] = pd.to_datetime(s[date_col], errors="coerce", dayfirst=True)
+    s[date_col] = _try_parse_dates(s[date_col].astype(str))
     s = s.dropna(subset=[date_col])
     g = s.groupby(pd.Grouper(key=date_col, freq=freq))[metric].sum().dropna()
     return [
