@@ -8,6 +8,36 @@ histórico por fase de desenvolvimento.
 
 ---
 
+## 2026-09-23 — Nova identidade visual + correções
+
+### Added
+- Identidade visual "terminal de dados editorial" (dark-first): paleta esmeralda/teal,
+  serifa Fraunces nos títulos, números em fonte mono tabular
+- Cabeçalho editorial + barra de comando no dashboard
+- Count-up nos KPIs (respeita `prefers-reduced-motion`; anima do valor anterior → novo)
+- Gráficos refinados: área com gradiente na linha, ticks mono, tooltip com swatch de cor,
+  hover nas barras
+- Slider duplo nos filtros (numérico e de data), com passo arredondado, sincronizado com
+  os campos De/Até
+- Elevação de material nos cards (sombra macia no claro, realce de 1px no escuro)
+- `planilhas-de-teste/vendas_temporais_2025.csv`: exemplo com série temporal
+- 4 testes de parsing de data em `test_analyzer_semantic.py` (total: 30)
+
+### Fixed
+- **Datas ISO (`AAAA-MM-DD`) com dia ≤ 12 tinham dia↔mês trocados** pelo `dayfirst=True`,
+  corrompendo min/max, série temporal e filtro de data. O parsing agora é ciente do formato
+  (ISO → `ISO8601`; `DD/MM/AAAA` → `dayfirst`). Aplicado em `analyzer.py`, `filters.py` e
+  `dashboard_planner.py`
+- Tooltip da pizza mostrava o rótulo da fatia duplicado (como título e como nome da linha)
+
+### Changed
+- Página de Histórico e relatório PDF (`report/`) alinhados à identidade esmeralda
+  (capa do relatório passou de gradiente índigo→roxo para esmeralda→teal)
+- Thumbnails da seção "Como funciona" regenerados com o visual novo
+- Logo e favicon: ícone do cérebro em esmeralda; wordmark `BI Agent_`
+
+---
+
 ## 2026-09-04 — Correções de análise + CI
 
 ### Added

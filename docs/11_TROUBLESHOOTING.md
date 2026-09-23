@@ -553,3 +553,46 @@ amplificação de chamadas por retry.
 
 Para desenvolvimento pesado, os decoradores `@limiter.limit(...)` podem ser afrouxados em
 `main.py` — mas **não commite** esse afrouxamento.
+
+---
+
+## 21. Datas ISO (`AAAA-MM-DD`) com dia/mês trocados
+
+### Sintoma
+
+Uma planilha com datas ISO (ex.: `2025-01-06` a `2025-09-08`) produzia no dashboard um
+intervalo de data errado no slider de filtro (ex.: `2025-01-09` a `2025-12-05`) e uma
+série temporal com meses fora do período real dos dados.
+
+### Causa
+
+`analyzer._try_parse_dates` usava `pd.to_datetime(..., dayfirst=True, format="mixed")`.
+O `dayfirst=True` — proposital para datas brasileiras `DD/MM/AAAA` — **também** é aplicado
+a datas ISO, e nelas troca dia↔mês sempre que o dia é ≤ 12 (`2025-01-06` → `2025-06-01`).
+Como só as datas com dia ≤ 12 são afetadas, o resultado é uma mistura de datas certas e
+trocadas, e o `min`/`max` sai errado. O mesmo `dayfirst=True` estava replicado em
+`filters.py` (filtro de intervalo) e `dashboard_planner._time_series` (dados da linha).
+
+### Diagnóstico
+
+```python
+import pandas as pd
+s = pd.Series(["2025-01-06", "2025-09-08"])
+pd.to_datetime(s, dayfirst=True, format="mixed").tolist()   # -> [2025-06-01, 2025-08-09]  ERRADO
+pd.to_datetime(s, format="ISO8601").tolist()                # -> [2025-01-06, 2025-09-08]  correto
+```
+
+### Solução (aplicada)
+
+`_try_parse_dates` passou a ser **ciente do formato**: se ≥ 80% dos valores casam com
+`^\d{4}-\d{1,2}-\d{1,2}` (ISO, ano primeiro), parseia com `format="ISO8601"`; caso
+contrário mantém `dayfirst=True` para `DD/MM/AAAA`. `filters.py` e `dashboard_planner.py`
+passaram a reutilizar `_try_parse_dates` em vez de chamar `to_datetime` com `dayfirst=True`
+por conta própria.
+
+### Validação
+
+- `test_analyzer_semantic.py`: `test_iso_dates_not_dayfirst_swapped`,
+  `test_profile_iso_date_minmax_correct`, `test_br_slash_dates_still_dayfirst`,
+  `test_range_filter_on_iso_dates` (datas BR continuam com `dayfirst`)
+- Os testes antigos não pegavam o bug porque usavam `dia=15` (> 12, sem troca)

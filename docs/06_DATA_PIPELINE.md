@@ -130,9 +130,19 @@ Colunas classificadas como `id` são excluídas de KPIs, gráficos e da matriz d
 
 ### Parsing de datas
 
-`analyzer._try_parse_dates`, `analyzer.py:12`. Usa `dayfirst=True` (padrão brasileiro
-DD/MM/AAAA) e `format="mixed"` para evitar o `UserWarning` que o pandas emite ao cair no
-dateutil linha a linha. Corrigido no commit `0e9b6ae`.
+`analyzer._try_parse_dates`, `analyzer.py:12`. É **ciente do formato**:
+
+- Se ≥ 80% dos valores casam com `^\d{4}-\d{1,2}-\d{1,2}` (ISO, ano primeiro), parseia com
+  `format="ISO8601"`.
+- Caso contrário, usa `dayfirst=True` (padrão brasileiro `DD/MM/AAAA`) com `format="mixed"`
+  (este evita o `UserWarning` que o pandas emite ao cair no dateutil linha a linha).
+
+Essa distinção existe porque `dayfirst=True` aplicado a datas ISO troca dia↔mês quando o
+dia é ≤ 12 (`2025-01-06` → `2025-06-01`) — ver `docs/11_TROUBLESHOOTING.md#21`. A mesma
+função é reutilizada por `filters.py` (filtro de intervalo de data) e
+`dashboard_planner._time_series`, para que coluna e limites sejam parseados de forma
+consistente. Histórico: `dayfirst`/`format="mixed"` no commit `0e9b6ae`; detecção de
+formato ISO adicionada depois.
 
 ---
 
