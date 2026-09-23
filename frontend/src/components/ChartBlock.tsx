@@ -94,7 +94,9 @@ function ChartTooltip({
       <div className="space-y-1">
         {payload.map((p, i) => {
           const name = p.name != null ? String(p.name) : "";
-          const showName = name !== "" && name !== "value";
+          // Não repetir o nome quando ele já é o título (caso da pizza,
+          // onde título e nome vêm do mesmo rótulo da fatia).
+          const showName = name !== "" && name !== "value" && name !== title;
           return (
             <div key={i} className="flex items-center gap-2">
               <span

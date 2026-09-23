@@ -14,7 +14,7 @@ const SEMANTIC_LABEL: Record<string, string> = {
 };
 
 const SEMANTIC_COLOR: Record<string, string> = {
-  numeric: "#4f46e5",
+  numeric: "#0b9668",
   categorical: "#0891b2",
   datetime: "#0891b2",
   datetime_like: "#0891b2",

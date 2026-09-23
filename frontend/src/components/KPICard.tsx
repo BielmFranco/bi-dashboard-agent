@@ -1,7 +1,7 @@
 "use client";
 
 import { animate, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { KPI } from "@/lib/api";
 import { fmtCompactBR, fmtNumberBR } from "@/lib/format";
 import { Card } from "@/components/ui/card";
@@ -25,8 +25,10 @@ type Props = { kpi: KPI; index?: number };
 export default function KPICard({ kpi, index = 0 }: Props) {
   const reduceMotion = useReducedMotion();
   const target = kpi.value;
-  // Count-up: o número sobe de 0 ao valor final ao carregar, como um terminal
-  // inicializando. Desativado para quem prefere menos movimento.
+  // Count-up: no 1º carregamento sobe de 0 (efeito "terminal"); ao reaplicar
+  // filtros, anima do valor anterior → novo (não recomeça do zero).
+  // `currentRef` guarda o último valor exibido, ponto de partida da animação.
+  const currentRef = useRef(0);
   const [display, setDisplay] = useState<number | null>(
     target === null || target === undefined ? null : reduceMotion ? target : 0,
   );
@@ -37,14 +39,18 @@ export default function KPICard({ kpi, index = 0 }: Props) {
       return;
     }
     if (reduceMotion) {
+      currentRef.current = target;
       setDisplay(target);
       return;
     }
-    const controls = animate(0, target, {
+    const controls = animate(currentRef.current, target, {
       duration: 0.85,
       delay: index * 0.05,
       ease: [0.16, 1, 0.3, 1],
-      onUpdate: (v) => setDisplay(v),
+      onUpdate: (v) => {
+        currentRef.current = v;
+        setDisplay(v);
+      },
     });
     return () => controls.stop();
   }, [target, reduceMotion, index]);
@@ -73,7 +79,7 @@ export default function KPICard({ kpi, index = 0 }: Props) {
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <p className="mt-2.5 font-mono text-[1.7rem] font-medium tnum tracking-tight text-[var(--foreground)] truncate cursor-default">
+                <p className="mt-2.5 font-mono text-[1.7rem] font-medium tabular-nums tracking-tight text-[var(--foreground)] truncate cursor-default">
                   {value}
                 </p>
               </TooltipTrigger>

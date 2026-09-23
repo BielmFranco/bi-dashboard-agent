@@ -18,8 +18,8 @@
   --r-primary-soft: #d4eded;
   --r-accent-warm: #c45a3c;
   --r-accent-gold: #9a8520;
-  --r-brand: #4f46e5;
-  --r-brand-strong: #4338ca;
+  --r-brand: #0b9668;
+  --r-brand-strong: #0a7d57;
   --r-success: #16a34a;
   --r-warning: #ca8a04;
   --r-danger: #dc2626;
@@ -55,7 +55,7 @@
 
 .report-cover {
   padding: 22px 34px;
-  background: linear-gradient(135deg, var(--r-brand-strong) 0%, var(--r-brand) 50%, #7c3aed 100%);
+  background: linear-gradient(135deg, var(--r-brand-strong) 0%, var(--r-brand) 50%, #0d9488 100%);
   color: #ffffff;
   position: relative;
   display: grid;
@@ -239,7 +239,7 @@
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 3px;
-  background: linear-gradient(180deg, var(--r-brand), #7c3aed);
+  background: linear-gradient(180deg, var(--r-brand), #0d9488);
 }
 .report-kpi-label {
   font-size: 9px;

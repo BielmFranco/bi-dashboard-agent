@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Clock, Database, FileText, Loader2, Trash2 } from "lucide-react";
+import { ArrowRight, Clock, Database, FileSpreadsheet, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -76,19 +76,24 @@ export default function HistoryPage() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="mb-6"
+          className="mb-8 flex items-end justify-between gap-4"
         >
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-2xl font-bold tracking-tight">Histórico</h1>
-            <Link href="/">
-              <Button variant="outline" size="sm">
-                Voltar
-              </Button>
-            </Link>
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+              Sessões salvas{files && files.length > 0 ? ` · ${files.length}` : ""}
+            </p>
+            <h1 className="font-display text-2xl sm:text-[1.7rem] font-medium leading-tight tracking-tight text-[var(--foreground)]">
+              Histórico
+            </h1>
+            <p className="mt-1.5 text-sm text-[var(--muted-foreground)]">
+              Suas análises anteriores — clique para restaurar.
+            </p>
           </div>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            Suas análises anteriores. Clique para restaurar.
-          </p>
+          <Link href="/" className="shrink-0">
+            <Button variant="outline" size="sm">
+              Voltar
+            </Button>
+          </Link>
         </motion.div>
 
         {files === null && (
@@ -99,7 +104,9 @@ export default function HistoryPage() {
 
         {files && files.length === 0 && (
           <Card className="p-12 text-center">
-            <Database className="h-8 w-8 mx-auto mb-3 text-[var(--muted-foreground)]" />
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--primary-dim)] text-[var(--primary)]">
+              <Database className="h-5 w-5" />
+            </div>
             <p className="text-sm font-medium">Nenhuma análise armazenada</p>
             <p className="text-xs text-[var(--muted-foreground)] mt-1">
               Envie uma planilha na tela inicial pra começar.
@@ -131,16 +138,19 @@ export default function HistoryPage() {
                 }}
                 className="group w-full text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] rounded-xl"
               >
-                <Card className="p-4 hover:border-[var(--muted-foreground)]/40 transition-colors">
+                <Card className="p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[color-mix(in_oklab,var(--primary)_40%,var(--border))] hover:shadow-[var(--shadow-card-hover)]">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--muted)] shrink-0">
-                      <FileText className="h-5 w-5 text-[var(--muted-foreground)]" />
+                    <span className="w-6 shrink-0 text-right font-mono text-[11px] tabular-nums text-[var(--muted-foreground)]">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--primary-dim)] text-[var(--primary)] shrink-0">
+                      <FileSpreadsheet className="h-5 w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-mono text-sm truncate">
+                      <p className="font-mono text-sm truncate text-[var(--foreground)]">
                         {f.filename ?? f.file_id}
                       </p>
-                      <div className="flex items-center gap-3 mt-1 text-[11px] text-[var(--muted-foreground)]">
+                      <div className="flex items-center gap-3 mt-1 font-mono text-[11px] text-[var(--muted-foreground)]">
                         <span className="inline-flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {formatDate(f.uploaded_at)}

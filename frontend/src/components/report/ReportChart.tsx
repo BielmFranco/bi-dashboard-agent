@@ -21,15 +21,16 @@ import {
   YAxis,
 } from "recharts";
 
+// Paleta esmeralda/teal em tons próprios para impressão (base papel/creme).
 const COLORS = [
-  "#4f46e5",
+  "#0b9668",
+  "#0d9488",
   "#0891b2",
-  "#059669",
+  "#65a30d",
   "#d97706",
-  "#dc2626",
-  "#7c3aed",
-  "#db2777",
   "#0284c7",
+  "#c2410c",
+  "#6b7280",
 ];
 
 function fmtLabel(v: unknown) {
@@ -51,7 +52,7 @@ export default function ReportChart({ chart }: { chart: ChartSpec }) {
         <h3 className="report-chart-title">{chart.title}</h3>
         <p className="report-chart-desc">{chart.rationale}</p>
         <div className="report-chart-body">
-          {stats && <Boxplot stats={stats} color="#4f46e5" outlierColor="#dc2626" />}
+          {stats && <Boxplot stats={stats} color="#0b9668" outlierColor="#dc2626" />}
         </div>
       </div>
     );
@@ -59,7 +60,7 @@ export default function ReportChart({ chart }: { chart: ChartSpec }) {
   const data = (chart.data as { label?: string; value?: number; x?: number; y?: number }[]).map((d) => ({ ...d, label: fmtLabel(d.label) }));
   const axis = "#64748b";
   const grid = "#e2e8f0";
-  const primary = "#4f46e5";
+  const primary = "#0b9668";
 
   return (
     <div className="report-chart">

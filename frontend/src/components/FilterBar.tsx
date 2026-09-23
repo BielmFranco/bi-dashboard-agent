@@ -285,7 +285,7 @@ export default function FilterBar({
             >
               {isDirty ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--primary)] animate-pulse motion-reduce:animate-none" />
                   Alterações pendentes — clique Aplicar para atualizar o dashboard.
                 </span>
               ) : activeCount > 0 ? (
@@ -333,6 +333,17 @@ function toNum(v: number | string | null | undefined, numeric: boolean): number 
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v));
+}
+
+// Passo "arredondado" (1 / 2 / 2.5 / 5 / 10 × potência de 10), ~1% da faixa,
+// para o arraste cair em valores redondos em vez de frações quebradas.
+function niceStep(range: number, integer: boolean): number {
+  const raw = range / 100 || 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10;
+  const step = nice * mag;
+  return integer ? Math.max(1, Math.round(step)) : step;
 }
 
 function RangeInput({
@@ -404,9 +415,7 @@ function RangeInput({
   }
   const range = hasSlider ? hi! - lo! : 1;
   const step = numeric
-    ? Number.isInteger(lo) && Number.isInteger(hi)
-      ? Math.max(1, Math.round(range / 100))
-      : range / 100
+    ? niceStep(range, Number.isInteger(lo) && Number.isInteger(hi))
     : 86_400_000; // 1 dia em ms
   const pctMin = hasSlider ? ((curMinNum - lo!) / range) * 100 : 0;
   const pctMax = hasSlider ? ((curMaxNum - lo!) / range) * 100 : 100;
@@ -437,7 +446,9 @@ function RangeInput({
               value={curMinNum}
               onChange={(e) => commit(Number(e.target.value), curMaxNum)}
               aria-label={`${col} mínimo`}
-              style={{ zIndex: pctMin > 88 ? 5 : 3 }}
+              // Punho de mínimo por cima quando os dois se agrupam num extremo
+              // (à direita: pctMin alto; à esquerda: pctMax baixo), para não travar.
+              style={{ zIndex: pctMin > 80 || pctMax < 20 ? 5 : 3 }}
             />
             <input
               type="range"
